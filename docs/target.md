@@ -1,135 +1,141 @@
-# Target state
+# Where ax is going
 
-4 October 2026. This is what ax is meant to become. Each section says what is implemented in 0.1.0 and what is not.
+4 October 2026. How to use what exists today: [README.md](../README.md).
 
-Status: **done** ships in this repo. **partial** exists but is thinner than the target. **not yet** is specified only.
+ax is supposed to stay small. You write a few facts about the product. The files your editor reads are generated. When a model gets stronger, you delete instructions you no longer need.
 
-The how-to for what works today is in [README.md](../README.md).
+This file is the destination. Each part says **built**, **started**, or **not built**.
 
-## What ax is
+## The idea
 
-A portable harness for people and agents building a product. The harness itself should get smaller and better over time. It runs from a clone of the product repo, in Cursor, Claude Code, or whatever comes next.
+People and agents should be able to clone a product repo and work the same way, in Cursor, Claude Code, or the next tool.
 
-Two repos: this repo is the machinery (schema, compiler, check runner, later evals and packs). Each product repo holds its own core, log, design sources, generated adapters, and vendored packs, and pins an ax version.
+There are two repos:
 
-**done** — ax repo exists; a product repo can pin `0.1.0`, hold a core and log, and compile Cursor plus Claude Code adapters.
+- **This repo (ax)** — the program.
+- **Each product repo** — a short “what we’re building,” a log, the actual design files, and generated editor files. It names the ax version it expects.
 
-**not yet** — packs, versioned releases, upgrade PRs, `ax doctor`, identical container from clone.
+**Built:** the program can write a log, run checks, and generate Cursor and Claude Code files from a product repo.
 
-## Principles
+**Not built:** a one-command project start, shared bundles you can drop into a new repo, upgrades, or “clone this and you get the same computer.”
 
-These are the bar. The skeleton follows them; they are not themselves executable.
+## Rules we are aiming at
 
-1. Store what cannot be derived; generate the rest.
-2. Rules become checks.
-3. Durable core, disposable adapters.
-4. Every crutch has an expiry.
-5. Change needs evidence.
-6. Add on failure, remove on schedule.
-7. Humans read it: short, plain, dated.
-8. Runs anywhere: clone plus container.
+1. Write down decisions and facts once. Generate summaries. Don’t keep two copies of the same story.
+2. If a rule matters and a machine can test it, make it a check, not a paragraph.
+3. You edit the source. Editor files are throwaways.
+4. Every workaround says why it exists and when to delete it.
+5. Don’t change how the team works because it “would be nice.” Change it because something broke or a test said so.
+6. Add process when you fail. Try to remove it when models improve.
+7. Anything we keep on disk should be short and readable by a person.
+8. Same repo, same environment, any machine.
 
-## Layers in a product repo
+## What lives in a product repo
 
-| Layer | Contents | Lifespan | Status |
-| --- | --- | --- | --- |
-| Durable core | intent, capabilities, checks, evals, log, design sources | Years. Changes through decisions. | **partial** — intent, capabilities, checks, log. No evals. |
-| Scaffolds | Workarounds for current model weaknesses | Months. Each has a retire condition. | **done** — schema and compile include them. No ablation that retires them. |
-| Adapters | `AGENTS.md`, `CLAUDE.md`, skills, commands, hooks, MCP | Disposable. Regenerated. | **done** — Cursor and Claude Code. |
+Three kinds of files:
 
-Deterministic work (validation, check running, hashing) is code. Judgment work (compile to a target, retros, teaching, extracting packs) is agents, with code validating the result.
+**Lasts for years.** What you’re building, how-we-work notes, checks, the log, and the real design (code, CAD, and so on). You change these when you decide to.
 
-**partial** — compile is a deterministic assembler with a `Writer` seam. The agent compiler is not wired.
+**Lasts for months.** Temporary “the model still gets this wrong” notes. Each one has a kill condition.
 
-## Project core
+**Thrown away and regenerated.** `AGENTS.md`, `CLAUDE.md`, slash commands, hooks.
 
-```
-project/
-  ax.yaml              # pin, targets, packs
-  core/
-    intent.md
-    capabilities/
-    scaffolds/
-    checks.yaml
-    evals/
-  log/
-    decisions/
-    observations/
-    friction/
-  packs/
-  .generated/
-```
+**Built:** the lasting files (except tests of the harness itself), the temporary notes, and Cursor / Claude Code generated files.
 
-**done** — `ax.yaml` (`ax`, `targets`, `packs: []`), `intent.md`, capabilities, scaffolds, `checks.yaml`, the three log kinds, `.generated/manifest.yaml`.
+**Started:** generating those files is a fixed program, not an AI pass. The plan is that an agent writes them and the program only checks the result.
 
-**not yet** — `core/evals/`, `packs/`, tools in the core, git-based immutability of decisions.
+**Not built:** tests that score the harness, and reuse bundles from other projects.
 
-Log rules that already hold: one file per entry; ids are `date-slug`, not numbers; a decision is never edited; a later decision may `supersedes` it.
+## Starting a project
 
-## Compile
+**Not built.** You create the folders by hand. See the README.
 
-`ax compile` turns the core into each tool's native files. Target specs in this repo say where things land. A new tool is one new spec.
+Later: `ax init` asks you what you’re building and writes the minimum. `ax adopt` reads an existing repo and proposes that minimum from history.
 
-**done** — `targets/cursor.md`, `targets/claude-code.md`; hash of intent, capabilities, scaffolds, checks, and target specs; skip when unchanged; validator (required files, frontmatter, every capability lands); markdown `do not edit` headers; JSON hashes in the manifest; `--target`; `--without <scaffold-id>` into a throwaway worktree; staleness check.
+## The log
 
-**not yet** — agent writer; a tools schema that fills MCP; more targets.
+One file per note, named with a date and a short slug, so two people can add files without colliding.
+
+- A **decision** is a choice. You never edit it. A newer decision can say it replaces an older one.
+- An **observation** is a measurement or finding, plus how you got it.
+- **Friction** is one line about what went wrong or felt heavy.
+
+**Built.**
+
+## Generating editor files
+
+You run `ax compile`. It reads what you wrote and writes the files each editor wants. If nothing changed, it stops. If you edit a generated file, checks fail until you compile again from the source.
+
+Supporting a new editor should mean adding one short description of where that editor keeps instructions, commands, hooks, and tools.
+
+**Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, and the check that catches a stale copy.
+
+**Not built:** an AI writing those files; filling in MCP tool configs from the project; any editor besides those two.
 
 ## Checks
 
-`ax check` runs the registry. Failures name the decision they enforce.
+`ax check` runs the tests listed in the project. A failure should point at the decision that made the rule, so you can see *why*, not only *what*.
 
-**done** — tiers `fast` / `full` / `slow` (cumulative; default `full`); hash cache in `.ax/`; `--all`; `run` as argv, no shell; builtins `ax-format`, `ax-consistency`, `ax-staleness`; failure output includes the enforced Why.
+**Built:** fast / full / slow, skip unchanged inputs, your own commands, and the three built-in tests (shape of files, links that exist, generated files match).
 
-**not yet** — after-edit hooks that work if `ax` is missing; judgment (LLM) checks; registering an existing project's tests automatically; hardware-in-the-loop skip tags.
+**Not built:** checks that need a physical board and get skipped when there isn’t one; an AI grading “is this readable?”; auto-import of a repo’s existing tests.
 
-## Evals and ablation
+## Tests of the harness, and deleting workarounds
 
-Evals are regression tests for the harness. Ablation compiles without a scaffold and compares scores. Health is harness size against mean eval score: size should fall while scores hold.
+The plan: a few short tasks that an agent tries, scored by a script or a rubric. When a new model ships, generate the editor files *without* a temporary note and see if the score holds. If it does, delete the note.
 
-**not yet** — eval format, `ax eval`, headless agent runs, `ax ablate`. `--without` is only the compile half.
+The healthy trend is fewer instruction files and the same or better scores.
 
-## Self-improvement
+**Not built.** Compile can already omit one temporary note (`--without`). Nothing scores the result.
 
-Friction is cheap to log. A retro clusters it, proposes core changes (including at least one deletion), runs evals, and opens a PR. A human merges.
+## Getting better over time
 
-**partial** — `ax log friction` works.
+Anyone can log friction in seconds. On a schedule, an agent reads recent friction, proposes a smaller or clearer set of instructions, runs the harness tests, and opens a pull request. A person merges or rejects. Every retro should try to delete something.
 
-**not yet** — `ax retro`, scheduled retros, agents logging friction unprompted, evals as a gate on harness PRs.
+**Started:** you can log friction.
 
-## Packs, upstream, onboarding
+**Not built:** the retro command, the schedule, and using harness tests as the gate.
 
-Packs are vendored discipline bundles. Improvements flow up as sanitized issues or PRs and back down as versioned upgrades. A project starts thin via `ax init` or `ax adopt`.
+## Sharing across projects
 
-**not yet** — all of it: `ax pack`, `ax propose-upstream`, releases, `ax upgrade`, `ax init`, `ax adopt`, `ax doctor`, fixtures CI that compiles every target.
+If several products need the same discipline (say, PCB work), that how-we-work set should become a pack you copy in. Updates arrive as a merge you can refuse. A pack has to pass its tests in an empty dummy project first, so it doesn’t secretly depend on the product it came from.
 
-Until `ax init` exists, hand-init as in the README.
+Fixes land in one product, get cleaned of private detail, and come back to everyone as an upgrade.
 
-## CLI
+**Not built.**
 
-| Command | Target | Status |
+## Same environment everywhere
+
+Clone the repo, open the container, get the same tools. Secrets stay in environment variables. `ax doctor` should prove a fresh container can run the checks.
+
+**Not built.**
+
+## Commands
+
+| Command | What it is for | Status |
 | --- | --- | --- |
-| `ax log decision\|observation\|friction` | Write a log entry | **done** |
-| `ax check [--tier] [--all]` | Run checks whose inputs changed | **done** |
-| `ax compile [--target] [--without]` | Core to adapters | **partial** — assembler, not an agent |
-| `ax init` | Interview, write a thin core, offer packs | **not yet** |
-| `ax adopt` | Onboard an existing repo from history | **not yet** |
-| `ax eval` | Headless evals in the container | **not yet** |
-| `ax ablate` | Score scaffolds with and without | **not yet** |
-| `ax retro` | Cluster friction, propose core changes, open PR | **not yet** |
-| `ax pack add\|extract\|bootstrap` | Install, extract, or bootstrap a discipline | **not yet** |
-| `ax propose-upstream` | File sanitized issues or PRs to ax | **not yet** |
-| `ax upgrade` | Move to a new ax release via PR | **not yet** |
-| `ax doctor` | Fresh-container portability check | **not yet** |
+| `ax log …` | Write a decision, observation, or friction note | Built |
+| `ax check` | Run the project’s tests | Built |
+| `ax compile` | Write the editor files from what you authored | Built (no AI in the loop) |
+| `ax init` | Start a new project by answering a few questions | Not built |
+| `ax adopt` | Add ax to a repo that already exists | Not built |
+| `ax eval` | Run the harness tests | Not built |
+| `ax ablate` | See if a temporary note is still needed | Not built |
+| `ax retro` | Propose cuts and fixes from logged friction | Not built |
+| `ax pack …` | Copy or extract a shared discipline bundle | Not built |
+| `ax propose-upstream` | Send a cleaned-up fix back to ax | Not built |
+| `ax upgrade` | Move the project to a new ax version | Not built |
+| `ax doctor` | Prove the repo runs in a fresh container | Not built |
 
 ## Build order
 
-| Phase | Exit | Status |
+| Phase | We will call it done when | Status |
 | --- | --- | --- |
-| 1 Skeleton | `ax check` passes on real projects | **done** |
-| 2 Compile | One core yields working Cursor and Claude Code adapters | **done** |
-| 3 Knowledge | Record-decision capability; an agent answers across disciplines from the log | **not yet** |
-| 4 Evals | Scores in the log | **not yet** |
-| 5 Retro | One accepted change and one accepted deletion | **not yet** |
-| 6 Ablation | A scaffold retired or confirmed with numbers | **not yet** |
-| 7 Upstream | Friction in one project becomes an upgrade PR in another | **not yet** |
-| 8 Packs and onboarding | A third project starts from `ax init` | **not yet** |
+| 1. Skeleton | `ax check` passes on real product repos | Built |
+| 2. Generate editor files | You and a teammate can use Cursor and Claude Code on the same repo | Built |
+| 3. Knowledge | An agent in one discipline can answer a question about another from the log and the source files | Not built |
+| 4. Harness tests | Scores show up in the log | Not built |
+| 5. Retro | One retro lands a change and a deletion | Not built |
+| 6. Drop workarounds | At least one temporary note is removed or kept, with numbers | Not built |
+| 7. Share upstream | A fix in one product becomes an upgrade in another | Not built |
+| 8. Packs and start | A third project starts with `ax init` only | Not built |
