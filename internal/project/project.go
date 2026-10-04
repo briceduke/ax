@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/briceduke/ax/internal/version"
 	"github.com/briceduke/ax/internal/yamlx"
@@ -57,6 +58,25 @@ func Load(root string) (*Config, error) {
 		cfg.Packs = []string{}
 	}
 	return &cfg, nil
+}
+
+// Save writes ax.yaml at root.
+func Save(root string, cfg *Config) error {
+	if cfg.Targets == nil {
+		cfg.Targets = []string{}
+	}
+	if cfg.Packs == nil {
+		cfg.Packs = []string{}
+	}
+	body := fmt.Sprintf("ax: %s\ntargets: %s\npacks: %s\n", cfg.Ax, formatList(cfg.Targets), formatList(cfg.Packs))
+	return os.WriteFile(filepath.Join(root, "ax.yaml"), []byte(body), 0644)
+}
+
+func formatList(items []string) string {
+	if len(items) == 0 {
+		return "[]"
+	}
+	return "[" + strings.Join(items, ", ") + "]"
 }
 
 // WarnVersion writes a pin mismatch warning without failing.

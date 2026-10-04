@@ -11,6 +11,11 @@ import (
 	"github.com/briceduke/ax/internal/core"
 )
 
+// WorktreeDir is the local copy used for compile --without experiments.
+func WorktreeDir(root, without string) string {
+	return filepath.Join(root, ".ax", "worktrees", "without-"+without)
+}
+
 func isolate(root, without string) (string, error) {
 	if without == "" {
 		return root, nil
@@ -19,7 +24,7 @@ func isolate(root, without string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	dest := filepath.Join(root, ".ax", "worktrees", "without-"+without)
+	dest := WorktreeDir(root, without)
 	if err := os.RemoveAll(dest); err != nil {
 		return "", err
 	}

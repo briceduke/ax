@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/eval"
 	"github.com/briceduke/ax/internal/logbook"
 	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/version"
@@ -32,6 +33,7 @@ func checkFormat(root string) error {
 	errs = append(errs, formatLog(root)...)
 	errs = append(errs, formatCapabilities(root)...)
 	errs = append(errs, formatScaffolds(root)...)
+	errs = append(errs, formatEvals(root)...)
 	return joinErrors(errs)
 }
 
@@ -95,6 +97,20 @@ func formatScaffolds(root string) []string {
 	var errs []string
 	for _, rel := range files {
 		if _, err := core.ParseScaffold(filepath.Join(root, filepath.FromSlash(rel))); err != nil {
+			errs = append(errs, rel+": "+err.Error())
+		}
+	}
+	return errs
+}
+
+func formatEvals(root string) []string {
+	files, err := core.ListMarkdown(root, "core/evals")
+	if err != nil {
+		return []string{err.Error()}
+	}
+	var errs []string
+	for _, rel := range files {
+		if _, err := eval.ParseFile(filepath.Join(root, filepath.FromSlash(rel))); err != nil {
 			errs = append(errs, rel+": "+err.Error())
 		}
 	}

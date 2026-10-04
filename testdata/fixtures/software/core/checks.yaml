@@ -4,6 +4,7 @@
     - log/**/*.md
     - core/capabilities/*.md
     - core/scaffolds/*.md
+    - core/evals/*.md
   tier: fast
   enforces: log/decisions/2026-10-01-adopt-ax-for-harness-management
 - id: ax-consistency
@@ -21,6 +22,7 @@
     - core/intent.md
     - core/capabilities/*.md
     - core/scaffolds/*.md
+    - core/evals/*.md
     - core/checks.yaml
     - .generated/manifest.yaml
   tier: fast

@@ -19,11 +19,12 @@ var decisionHeadings = []string{"## Context", "## Options", "## Choice", "## Why
 
 // Decision is the strict decision frontmatter schema.
 type Decision struct {
-	ID         string   `yaml:"id"`
-	Kind       string   `yaml:"kind"`
-	Date       string   `yaml:"date"`
-	Supersedes []string `yaml:"supersedes,omitempty"`
-	Body       string   `yaml:"-"`
+	ID            string   `yaml:"id"`
+	Kind          string   `yaml:"kind"`
+	Date          string   `yaml:"date"`
+	Supersedes    []string `yaml:"supersedes,omitempty"`
+	Reconstructed bool     `yaml:"reconstructed,omitempty"`
+	Body          string   `yaml:"-"`
 }
 
 // Observation is the strict observation frontmatter schema.
@@ -104,6 +105,15 @@ func parseDecision(data []byte) (*Decision, error) {
 	return &d, nil
 }
 
+// ParseObservation reads an observation file.
+func ParseObservation(path string) (*Observation, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return parseObservation(data)
+}
+
 func parseObservation(data []byte) (*Observation, error) {
 	var o Observation
 	body, err := core.DecodeFrontmatter(data, &o)
@@ -135,6 +145,40 @@ func parseFriction(data []byte) (*Friction, error) {
 	}
 	f.Body = body
 	return &f, nil
+}
+
+// LoadFriction parses every friction entry under log/friction.
+func LoadFriction(root string) ([]*Friction, error) {
+	rels, err := core.ListMarkdown(root, RelDir("friction"))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Friction, 0, len(rels))
+	for _, rel := range rels {
+		f, err := ParseFrictionFile(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", rel, err)
+		}
+		out = append(out, f)
+	}
+	return out, nil
+}
+
+// LoadObservations parses every observation entry under log/observations.
+func LoadObservations(root string) ([]*Observation, error) {
+	rels, err := core.ListMarkdown(root, RelDir("observation"))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Observation, 0, len(rels))
+	for _, rel := range rels {
+		o, err := ParseObservation(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", rel, err)
+		}
+		out = append(out, o)
+	}
+	return out, nil
 }
 
 func checkIdentity(id, kind, date, wantKind, filenameID string, lines, maxLines int) error {

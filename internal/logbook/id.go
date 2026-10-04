@@ -42,9 +42,14 @@ func KindFromDir(dir string) (string, bool) {
 	}
 }
 
+// RelDir is log/<kind-dir> using slash separators.
+func RelDir(kind string) string {
+	return "log/" + KindDir(kind)
+}
+
 // RelPath is log/<kind-dir>/<id>.md using slash separators.
 func RelPath(kind, id string) string {
-	return "log/" + KindDir(kind) + "/" + id + ".md"
+	return RelDir(kind) + "/" + id + ".md"
 }
 
 // ValidID reports whether id matches the date-slug pattern.

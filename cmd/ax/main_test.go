@@ -35,6 +35,34 @@ func TestCheckFixtures(t *testing.T) {
 	}
 }
 
+func TestEvalHardwareWritesScores(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	repo := filepath.Join(filepath.Dir(thisFile), "..", "..")
+	src := filepath.Join(repo, "testdata", "fixtures", "hardware")
+	dst := t.TempDir()
+	copyTree(t, src, dst)
+	t.Chdir(dst)
+	stdout, stderr := capture(t, func() error {
+		return run([]string{"eval", "--runs", "1"})
+	})
+	if stderr != "" && !strings.HasPrefix(stderr, "warning:") {
+		t.Fatalf("stderr = %q", stderr)
+	}
+	if !strings.Contains(stdout, "cross-discipline-impact") || !strings.Contains(stdout, "harness-format") || !strings.Contains(stdout, "idle-current-range") {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	entries, err := os.ReadDir(filepath.Join(dst, "log", "observations"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) < 3 {
+		t.Fatalf("got %d observations", len(entries))
+	}
+}
+
 func capture(t *testing.T, fn func() error) (string, string) {
 	t.Helper()
 	oldOut, oldErr := os.Stdout, os.Stderr

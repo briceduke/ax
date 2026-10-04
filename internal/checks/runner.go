@@ -103,6 +103,32 @@ func Run(root string, opts Options, out io.Writer) error {
 	return nil
 }
 
+// RunNamed runs one check by id, ignoring cache.
+func RunNamed(root, id string) error {
+	all, err := LoadRegistry(root)
+	if err != nil {
+		return err
+	}
+	cache, err := loadCache(root)
+	if err != nil {
+		return err
+	}
+	for _, check := range all {
+		if check.ID != id {
+			continue
+		}
+		status, detail := runOne(root, check, Options{Tier: check.Tier, All: true}, cache)
+		if status == "FAIL" {
+			if detail == "" {
+				return fmt.Errorf("check %s failed", id)
+			}
+			return fmt.Errorf("%s", detail)
+		}
+		return nil
+	}
+	return fmt.Errorf("unknown check %s", id)
+}
+
 func runOne(root string, check Check, opts Options, cache *cacheFile) (string, string) {
 	if check.Builtin != "" {
 		if err := runBuiltin(root, check.Builtin); err != nil {

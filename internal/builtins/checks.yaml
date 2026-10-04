@@ -6,7 +6,7 @@
     - core/scaffolds/*.md
     - core/evals/*.md
   tier: fast
-  enforces: log/decisions/2026-10-02-quote-the-datasheet
+  enforces: {{enforces}}
 - id: ax-consistency
   builtin: ax-consistency
   inputs:
@@ -14,7 +14,7 @@
     - core/scaffolds/*.md
     - log/**/*.md
   tier: fast
-  enforces: log/decisions/2026-10-02-quote-the-datasheet
+  enforces: {{enforces}}
 - id: ax-staleness
   builtin: ax-staleness
   inputs:
@@ -26,4 +26,4 @@
     - core/checks.yaml
     - .generated/manifest.yaml
   tier: fast
-  enforces: log/decisions/2026-10-02-quote-the-datasheet
+  enforces: {{enforces}}

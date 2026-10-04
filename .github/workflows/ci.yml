@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build -o ax ./cmd/ax
+      - name: Compile and check fixtures
+        run: |
+          set -euo pipefail
+          AX="$PWD/ax"
+          for name in software hardware; do
+            d=$(mktemp -d)
+            cp -a "testdata/fixtures/${name}/." "$d/"
+            printf 'ax: 0.1.0\ntargets: [cursor, claude-code]\npacks: []\n' > "$d/ax.yaml"
+            (cd "$d" && "$AX" compile && "$AX" check)
+          done

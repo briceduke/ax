@@ -15,9 +15,9 @@ There are two repos:
 - **This repo (ax)** — the program.
 - **Each product repo** — a short “what we’re building,” a log, the actual design files, and generated editor files. It names the ax version it expects.
 
-**Built:** the program can write a log, run checks, and generate Cursor and Claude Code files from a product repo.
+**Built:** the program can start a project, write a log, run checks and evals, generate Cursor and Claude Code files, propose retros and pack updates, and write local upgrade notes.
 
-**Not built:** a one-command project start, shared bundles you can drop into a new repo, upgrades, or “clone this and you get the same computer.”
+**Not built:** fetching a new ax version from the network, submitting GitHub issues for you, or “clone this and you get the same computer.”
 
 ## Rules we are aiming at
 
@@ -34,30 +34,28 @@ There are two repos:
 
 Three kinds of files:
 
-**Lasts for years.** What you’re building, how-we-work notes, checks, the log, and the real design (code, CAD, and so on). You change these when you decide to.
+**Lasts for years.** What you’re building, how-we-work notes, checks, evals, the log, packs you copied in, and the real design (code, CAD, and so on). You change these when you decide to.
 
 **Lasts for months.** Temporary “the model still gets this wrong” notes. Each one has a kill condition.
 
 **Thrown away and regenerated.** `AGENTS.md`, `CLAUDE.md`, slash commands, hooks.
 
-**Built:** the lasting files (except tests of the harness itself), the temporary notes, and Cursor / Claude Code generated files.
+**Built:** the lasting files, the temporary notes, scored evals, Cursor / Claude Code generated files, and local pack/upstream/upgrade drafts.
 
-**Started:** generating those files is a fixed program, not an AI pass. The plan is that an agent writes them and the program only checks the result.
-
-**Not built:** tests that score the harness, and reuse bundles from other projects.
+**Started:** generating editor files is a fixed program, not an AI pass. The plan is that an agent writes them and the program only checks the result. Rubric evals use a substring stand-in for the same reason.
 
 ## Starting a project
 
-**Not built.** You create the folders by hand. See the README.
+**Built.** `ax init --name --intent` writes the minimum tree, the built-in record-decision note, the first decision, and compiles. `ax adopt` reads an existing repo, writes an intent stub, and can register `go test ./...` if it finds Go.
 
-Later: `ax init` asks you what you’re building and writes the minimum. `ax adopt` reads an existing repo and proposes that minimum from history.
+Interactive questions run only if stdin is a terminal.
 
 ## The log
 
 One file per note, named with a date and a short slug, so two people can add files without colliding.
 
-- A **decision** is a choice. You never edit it. A newer decision can say it replaces an older one.
-- An **observation** is a measurement or finding, plus how you got it.
+- A **decision** is a choice. You never edit it. A newer decision can say it replaces an older one. Adopted history can be marked `reconstructed: true`.
+- An **observation** is a measurement or finding, plus how you got it. Eval scores use method `eval`.
 - **Friction** is one line about what went wrong or felt heavy.
 
 **Built.**
@@ -68,7 +66,7 @@ You run `ax compile`. It reads what you wrote and writes the files each editor w
 
 Supporting a new editor should mean adding one short description of where that editor keeps instructions, commands, hooks, and tools.
 
-**Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, and the check that catches a stale copy.
+**Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, the check that catches a stale copy, and a built-in `/record-decision` command.
 
 **Not built:** an AI writing those files; filling in MCP tool configs from the project; any editor besides those two.
 
@@ -76,39 +74,43 @@ Supporting a new editor should mean adding one short description of where that e
 
 `ax check` runs the tests listed in the project. A failure should point at the decision that made the rule, so you can see *why*, not only *what*.
 
-**Built:** fast / full / slow, skip unchanged inputs, your own commands, and the three built-in tests (shape of files, links that exist, generated files match).
+**Built:** fast / full / slow, skip unchanged inputs, your own commands, and the built-in tests (shape of files including evals, links that exist, generated files match).
 
-**Not built:** checks that need a physical board and get skipped when there isn’t one; an AI grading “is this readable?”; auto-import of a repo’s existing tests.
+**Not built:** checks that need a physical board and get skipped when there isn’t one; an AI grading “is this readable?” (the rubric stand-in is substring match); a full auto-import of every existing test in a large repo.
 
 ## Tests of the harness, and deleting workarounds
 
-The plan: a few short tasks that an agent tries, scored by a script or a rubric. When a new model ships, generate the editor files *without* a temporary note and see if the score holds. If it does, delete the note.
+A few short tasks under `core/evals/`. A script or a rubric scores them. `ax eval` writes the scores into the log. `ax ablate` generates the editor files without a temporary note and compares scores. If the score holds, it proposes deleting the note. A person still decides.
 
-The healthy trend is fewer instruction files and the same or better scores.
+**Built:** eval format, script graders, rubric stand-in, ablation, and three hardware-fixture evals.
 
-**Not built.** Compile can already omit one temporary note (`--without`). Nothing scores the result.
+**Not built:** calling a model to attempt the task, or a scheduled ablation bot.
 
 ## Getting better over time
 
-Anyone can log friction in seconds. On a schedule, an agent reads recent friction, proposes a smaller or clearer set of instructions, runs the harness tests, and opens a pull request. A person merges or rejects. Every retro should try to delete something.
+Anyone can log friction in seconds. `ax retro` reads recent friction, proposes a smaller or clearer set of instructions, and always tries to delete something. The proposal is local files. A person merges or rejects.
 
-**Started:** you can log friction.
+**Built:** the retro command and proposal shape check.
 
-**Not built:** the retro command, the schedule, and using harness tests as the gate.
+**Not built:** a calendar schedule that runs retro for you.
 
 ## Sharing across projects
 
-If several products need the same discipline (say, PCB work), that how-we-work set should become a pack you copy in. Updates arrive as a merge you can refuse. A pack has to pass its tests in an empty dummy project first, so it doesn’t secretly depend on the product it came from.
+If several products need the same discipline (say, PCB work), that how-we-work set should become a pack you copy in. Updates arrive as a merge you can refuse.
 
-Fixes land in one product, get cleaned of private detail, and come back to everyone as an upgrade.
+Fixes land in one product, get cleaned of private detail, and come back as files under `.ax/upstream/`. CI in this repo runs tests and compiles both fixtures.
 
-**Not built.**
+**Built:** pack add/extract/bootstrap, local sanitized upstream drafts, `ax upgrade --from` a local directory, GitHub Actions for this repo.
+
+**Not built:** publishing a pack to a dummy project gate automatically; fetching ax from the network; opening a real GitHub issue without an injected client.
 
 ## Same environment everywhere
 
-Clone the repo, open the container, get the same tools. Secrets stay in environment variables. `ax doctor` should prove a fresh container can run the checks.
+`ax doctor` checks `ax.yaml`, `ax check`, and that `ax` is on PATH. If Docker is installed it says so. Missing Docker does not fail the command.
 
-**Not built.**
+**Started:** doctor without requiring Docker.
+
+**Not built:** a committed container that gives every clone the same computer.
 
 ## Commands
 
@@ -117,15 +119,15 @@ Clone the repo, open the container, get the same tools. Secrets stay in environm
 | `ax log …` | Write a decision, observation, or friction note | Built |
 | `ax check` | Run the project’s tests | Built |
 | `ax compile` | Write the editor files from what you authored | Built (no AI in the loop) |
-| `ax init` | Start a new project by answering a few questions | Not built |
-| `ax adopt` | Add ax to a repo that already exists | Not built |
-| `ax eval` | Run the harness tests | Not built |
-| `ax ablate` | See if a temporary note is still needed | Not built |
-| `ax retro` | Propose cuts and fixes from logged friction | Not built |
-| `ax pack …` | Copy or extract a shared discipline bundle | Not built |
-| `ax propose-upstream` | Send a cleaned-up fix back to ax | Not built |
-| `ax upgrade` | Move the project to a new ax version | Not built |
-| `ax doctor` | Prove the repo runs in a fresh container | Not built |
+| `ax init` | Start a new project | Built |
+| `ax adopt` | Add ax to a repo that already exists | Built |
+| `ax eval` | Run the harness tests and log scores | Built (no model calls) |
+| `ax ablate` | See if a temporary note is still needed | Built |
+| `ax retro` | Propose cuts and fixes from logged friction | Built (no auto-merge) |
+| `ax pack …` | Copy or extract a shared discipline bundle | Built |
+| `ax propose-upstream` | Write a cleaned-up fix locally | Built (GitHub submit is a seam) |
+| `ax upgrade` | Move the project to a new ax version from a local dir | Built (no network fetch) |
+| `ax doctor` | Prove the repo’s files and PATH are sane | Built (Docker optional) |
 
 ## Build order
 
@@ -133,9 +135,9 @@ Clone the repo, open the container, get the same tools. Secrets stay in environm
 | --- | --- | --- |
 | 1. Skeleton | `ax check` passes on real product repos | Built |
 | 2. Generate editor files | You and a teammate can use Cursor and Claude Code on the same repo | Built |
-| 3. Knowledge | An agent in one discipline can answer a question about another from the log and the source files | Not built |
-| 4. Harness tests | Scores show up in the log | Not built |
-| 5. Retro | One retro lands a change and a deletion | Not built |
-| 6. Drop workarounds | At least one temporary note is removed or kept, with numbers | Not built |
-| 7. Share upstream | A fix in one product becomes an upgrade in another | Not built |
-| 8. Packs and start | A third project starts with `ax init` only | Not built |
+| 3. Knowledge | `/record-decision` exists after compile; a choice is written into the log | Built |
+| 4. Harness tests | Scores show up in the log | Built |
+| 5. Retro | One retro writes a proposal that includes a deletion | Built (human still merges) |
+| 6. Drop workarounds | Ablation writes numbers and a keep-or-drop proposal | Built (human still deletes) |
+| 7. Share upstream | A fix becomes local upstream files and CI runs on ax itself | Built (no auto GitHub) |
+| 8. Packs and start | A third project starts with `ax init` only | Built |

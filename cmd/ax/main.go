@@ -1,16 +1,24 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/briceduke/ax/internal/ablate"
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/compile"
+	"github.com/briceduke/ax/internal/eval"
 	"github.com/briceduke/ax/internal/logbook"
+	"github.com/briceduke/ax/internal/onboard"
+	"github.com/briceduke/ax/internal/pack"
 	"github.com/briceduke/ax/internal/project"
+	"github.com/briceduke/ax/internal/retro"
+	"github.com/briceduke/ax/internal/upgrade"
+	"github.com/briceduke/ax/internal/upstream"
 )
 
 func main() {
@@ -31,6 +39,24 @@ func run(args []string) error {
 		return runCheck(args[1:])
 	case "compile":
 		return runCompile(args[1:])
+	case "eval":
+		return runEval(args[1:])
+	case "retro":
+		return runRetro(args[1:])
+	case "ablate":
+		return runAblate(args[1:])
+	case "propose-upstream":
+		return runProposeUpstream(args[1:])
+	case "upgrade":
+		return runUpgrade(args[1:])
+	case "pack":
+		return runPack(args[1:])
+	case "init":
+		return runInit(args[1:])
+	case "adopt":
+		return runAdopt(args[1:])
+	case "doctor":
+		return runDoctor(args[1:])
 	default:
 		return fmt.Errorf("unknown command %q\n%s", args[0], usage())
 	}
@@ -46,6 +72,17 @@ Usage:
   ax log decision <title> [--supersedes <id>]
   ax check [--tier fast|full|slow] [--all]
   ax compile [--target <name>] [--without <scaffold-id>]
+  ax eval [--without <scaffold-id>] [--runs <n>]
+  ax retro
+  ax ablate
+  ax propose-upstream [--friction <id>] [--layer machinery|schema|target|pack] [--change <text>] [--helps-others]
+  ax upgrade [--from <dir>]
+  ax pack add <dir>
+  ax pack extract <dir> --id <id> [--file <path>] [--replace old=PARAM]
+  ax pack bootstrap <discipline>
+  ax init --name <name> --intent <text> [--targets cursor,claude-code]
+  ax adopt
+  ax doctor
 `) + "\n"
 }
 
@@ -135,6 +172,220 @@ func runCompile(args []string) error {
 		return err
 	}
 	return compile.Run(root, compile.Options{Target: flags["target"], Without: flags["without"]}, os.Stdout)
+}
+
+func runEval(args []string) error {
+	fs := newFlagSet("eval")
+	without := fs.String("without", "", "compile without this scaffold first")
+	runs := fs.Int("runs", 0, "override eval run count")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	orig := root
+	if *without != "" {
+		if err := compile.Run(root, compile.Options{Without: *without}, os.Stdout); err != nil {
+			return err
+		}
+		root = compile.WorktreeDir(root, *without)
+	}
+	_, err = eval.Run(root, eval.Options{
+		Without:  *without,
+		Runs:     *runs,
+		RunCheck: checks.RunNamed,
+		LogRoot:  orig,
+	}, os.Stdout)
+	return err
+}
+
+func runRetro(args []string) error {
+	fs := newFlagSet("retro")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	_, err = retro.Run(root, retro.Options{}, os.Stdout)
+	return err
+}
+
+func runAblate(args []string) error {
+	fs := newFlagSet("ablate")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	return ablate.Run(root, ablate.Options{RunCheck: checks.RunNamed}, os.Stdout)
+}
+
+func runProposeUpstream(args []string) error {
+	fs := newFlagSet("propose-upstream")
+	friction := fs.String("friction", "", "friction id")
+	layer := fs.String("layer", "machinery", "machinery, schema, target, or pack")
+	change := fs.String("change", "", "proposed change")
+	helps := fs.Bool("helps-others", false, "would this help another project")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	return upstream.Run(root, upstream.Options{
+		Friction:    *friction,
+		Layer:       *layer,
+		Change:      *change,
+		HelpsOthers: *helps,
+	}, os.Stdout)
+}
+
+func runUpgrade(args []string) error {
+	fs := newFlagSet("upgrade")
+	from := fs.String("from", "", "local machinery directory with a VERSION file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	return upgrade.Run(root, upgrade.Options{From: *from}, os.Stdout)
+}
+
+func runPack(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: ax pack add|extract|bootstrap ...")
+	}
+	switch args[0] {
+	case "add":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: ax pack add <dir>")
+		}
+		root, _, err := loadRoot()
+		if err != nil {
+			return err
+		}
+		return pack.Add(root, args[1], os.Stdout)
+	case "extract":
+		fs := newFlagSet("pack extract")
+		id := fs.String("id", "", "pack id")
+		var files stringList
+		var replacements stringMap
+		fs.Var(&files, "file", "project file to include (repeatable)")
+		fs.Var(&replacements, "replace", "old=PARAM (repeatable)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if fs.NArg() != 1 {
+			return fmt.Errorf("usage: ax pack extract <dir> --id <id> [--file path] [--replace old=PARAM]")
+		}
+		root, _, err := loadRoot()
+		if err != nil {
+			return err
+		}
+		return pack.Extract(root, fs.Arg(0), *id, files, replacements, os.Stdout)
+	case "bootstrap":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: ax pack bootstrap <discipline>")
+		}
+		root, _, err := loadRoot()
+		if err != nil {
+			return err
+		}
+		return pack.Bootstrap(root, args[1], os.Stdout)
+	default:
+		return fmt.Errorf("unknown pack command %q", args[0])
+	}
+}
+
+func runInit(args []string) error {
+	fs := newFlagSet("init")
+	name := fs.String("name", "", "project name")
+	intent := fs.String("intent", "", "what is being built")
+	targets := fs.String("targets", "cursor,claude-code", "comma-separated editor targets")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	return onboard.Init(cwd, onboard.InitOptions{
+		Name:    *name,
+		Intent:  *intent,
+		Targets: *targets,
+		IsTTY:   isTTY(os.Stdin),
+		Stdin:   os.Stdin,
+	}, os.Stdout)
+}
+
+func runAdopt(args []string) error {
+	fs := newFlagSet("adopt")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	return onboard.Adopt(cwd, time.Now(), os.Stdout)
+}
+
+func runDoctor(args []string) error {
+	fs := newFlagSet("doctor")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	return onboard.Doctor(root, os.Stdout)
+}
+
+func newFlagSet(name string) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	return fs
+}
+
+func isTTY(in *os.File) bool {
+	stat, err := in.Stat()
+	if err != nil {
+		return false
+	}
+	return stat.Mode()&os.ModeCharDevice != 0
+}
+
+type stringList []string
+
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+func (s *stringList) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
+
+type stringMap map[string]string
+
+func (m *stringMap) String() string { return fmt.Sprint(*m) }
+func (m *stringMap) Set(v string) error {
+	old, param, ok := strings.Cut(v, "=")
+	if !ok || old == "" || param == "" {
+		return fmt.Errorf("replace value must be old=PARAM")
+	}
+	if *m == nil {
+		*m = map[string]string{}
+	}
+	(*m)[old] = param
+	return nil
 }
 
 func partition(args []string) ([]string, map[string]string, error) {

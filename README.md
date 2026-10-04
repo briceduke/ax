@@ -2,16 +2,19 @@
 
 4 October 2026. A small command-line tool that keeps one copy of “how we work on this product” and writes the files Cursor and Claude Code read.
 
-The longer plan, and what is not built yet, is in [docs/target.md](docs/target.md).
+The longer plan is in [docs/target.md](docs/target.md).
 
 ## What you can do today
 
+- Start a project with `ax init`, or add ax to an existing repo with `ax adopt`.
 - Write down what you are building.
 - Write down decisions, measurements, and things that went wrong.
-- Turn that into `AGENTS.md` (Cursor) and `CLAUDE.md` (Claude Code).
-- Run a few checks that fail if those files are out of date or the log is malformed.
+- Turn that into `AGENTS.md` (Cursor) and `CLAUDE.md` (Claude Code). `/record-decision` is always available after compile.
+- Run checks that fail if those files are out of date or the log is malformed.
+- Run short scored tasks (`ax eval`), propose cuts from friction (`ax retro`), and see whether a temporary note is still needed (`ax ablate`).
+- Copy a shared bundle in (`ax pack add`) or write a cleaned-up fix locally (`ax propose-upstream`). Nothing is merged for you.
 
-You cannot yet start a project with one command, reuse a pack from another project, or have ax improve itself on a schedule.
+You still approve every change. ax does not call language models and does not talk to GitHub unless you wire that up later.
 
 ## Install
 
@@ -23,11 +26,29 @@ go build -o ax.exe ./cmd/ax
 
 Put `ax.exe` on your PATH and name it so the command is `ax`. After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits.
 
-## Add ax to a product repo
+## Start a new project
 
-There is no `ax init` yet. Do this once.
+```powershell
+ax init --name widget --intent "A small recorder for field notes."
+```
 
-**1. Tell ax which tools you use.** Create `ax.yaml` at the repo root:
+That writes the folders below, logs that you adopted ax, generates the editor files, and leaves you in a state where `ax check` passes.
+
+If stdin is a terminal and you omit the flags, ax asks two questions. Tests and scripts should always pass `--name` and `--intent`.
+
+To add ax to a repo that already has code:
+
+```powershell
+ax adopt
+```
+
+That writes a short intent stub, copies the built-in “record a decision” note, and if it finds `go.mod`, registers `go test ./...` as a check. Inferred decisions are marked `reconstructed: true`.
+
+`ax doctor` checks `ax.yaml`, runs `ax check`, and confirms `ax` is on your PATH. Docker is optional. Missing Docker does not fail CI.
+
+## Add ax by hand
+
+You can still do this without `ax init`. Create `ax.yaml` at the repo root:
 
 ```yaml
 ax: 0.1.0
@@ -35,39 +56,25 @@ targets: [cursor, claude-code]
 packs: []
 ```
 
-**2. Ignore ax’s cache.** Add `.ax/` to `.gitignore`. Optional but useful: in `.gitattributes`, put `* text=auto eol=lf` so Windows and Linux hash files the same way.
+Add `.ax/` to `.gitignore`. Optional but useful: in `.gitattributes`, put `* text=auto eol=lf` so Windows and Linux hash files the same way.
 
-**3. Say what you are building.** Create `core/intent.md`. Keep it under a page. Cover:
+Create `core/intent.md` (under a page). Cover what it is, who it is for, what you value, what “good” looks like, and how much process you will tolerate.
 
-- what it is
-- who it is for
-- what you value
-- what “good” looks like
-- how much process you will tolerate
-
-**4. Make empty folders**
+Make empty folders:
 
 ```
 core/capabilities
 core/scaffolds
+core/evals
 log/decisions
 log/observations
 log/friction
 ```
 
-**5. Turn on the built-in checks.** Copy [testdata/fixtures/software/core/checks.yaml](testdata/fixtures/software/core/checks.yaml) to `core/checks.yaml`. After step 6, change every `enforces:` path to the decision file you just wrote.
-
-**6. Log that you started using ax**
+Copy [testdata/fixtures/software/core/checks.yaml](testdata/fixtures/software/core/checks.yaml) to `core/checks.yaml`. After you log the first decision, point every `enforces:` path at that file.
 
 ```powershell
 ax log decision "adopt ax for harness management"
-```
-
-That prints a file path. Open it and fill in Context, Options, Choice, and Why.
-
-**7. Generate the editor files and see that checks pass**
-
-```powershell
 ax compile
 ax check
 ```
@@ -98,11 +105,13 @@ ax log observation "4.1 mA while recording" --method "ammeter on the dev board"
 ax log decision "detent twist is the power switch"
 ```
 
-Fill in the four sections. Do not go back and edit an old decision. Write a new one. If it replaces an old one:
+Or type `/record-decision` in Cursor or Claude Code. Fill in the four sections. Do not go back and edit an old decision. Write a new one. If it replaces an old one:
 
 ```powershell
 ax log decision "use a slide switch" --supersedes 2026-10-04-detent-twist-is-the-power-switch
 ```
+
+Ask whether a machine can test the choice. If yes, add a check in the same change.
 
 **Then**
 
@@ -118,10 +127,12 @@ ax check
 | `core/intent.md` | What this product is. The only long note that lasts. |
 | `core/capabilities/` | Repeatable jobs you want the agent to do, even when models get smarter. Example: “when we make a choice, write it down.” |
 | `core/scaffolds/` | Temporary “don’t forget this” notes for a weakness the model has today. Each one must say when you will delete it. |
+| `core/evals/` | Short scored tasks. A script or a rubric says pass or fail. |
 | `core/checks.yaml` | Commands or built-in tests that must stay true. |
 | `log/decisions/` | Choices. One file each. Never edited. |
-| `log/observations/` | Dated facts and how you got them. |
+| `log/observations/` | Dated facts and how you got them. Eval scores land here too. |
 | `log/friction/` | One-line “this hurt.” |
+| `packs/` | Shared bundles copied in from another project. |
 
 `ax compile` writes `AGENTS.md`, `CLAUDE.md`, and a few hook files so the editor runs `ax check` after you save. It also writes `.generated/manifest.yaml` so it can tell if those files still match what you wrote.
 
@@ -148,6 +159,8 @@ Write a dated entry: context, options considered, choice, why.
 
 Extra fields in that top matter are errors. ax will not guess.
 
+`record-decision` ships with ax. Compile includes it even if the project file is missing. After compile you can type `/record-decision`.
+
 ## Temporary notes (scaffolds)
 
 ```markdown
@@ -163,6 +176,30 @@ Before you assign a pin, quote the datasheet row it comes from.
 ```
 
 `added` must point at a friction file that exists.
+
+## Harness tests (evals)
+
+Short markdown files under `core/evals/`:
+
+```markdown
+---
+id: cross-discipline-impact
+related: [capability/record-decision]
+runs: 3
+---
+task: >
+  Find the record-decision note from the product files.
+grader:
+  kind: script
+  file: core/capabilities/record-decision.md
+```
+
+`ax eval` runs each grader and writes a dated observation (`method: eval`) with the score.
+
+- Script graders: a named check passed, a file exists, or the first number in a file is in range.
+- Rubric graders: required substrings in `core/` and `log/`. This is a stand-in so tests work without calling a model.
+
+`ax eval --without verify-pinouts` compiles without that temporary note first, then scores.
 
 ## Your own checks
 
@@ -190,9 +227,23 @@ ax remembers the last pass. If the check and its input files did not change, it 
 
 Built in:
 
-- files in `core/` and `log/` are shaped right
+- files in `core/` and `log/` are shaped right (including evals)
 - links between files actually exist
 - generated editor files still match what you last compiled
+
+## Getting better over time
+
+`ax retro` reads friction since the last retro, recent log notes, and the latest eval scores. It clusters problems, suggests an eval when the same pain repeats with no test, and **always proposes at least one deletion**. The proposal is markdown under `.ax/retro/`. You merge or reject it.
+
+`ax ablate` compiles without each temporary note, runs the related evals with and without it, writes the scores, and proposes retirement when the score without the note is at least as good.
+
+## Sharing
+
+`ax pack add <dir>` copies a pack into `packs/` and merges the files it provides. `ax pack extract` copies selected local files into a pack directory and can replace product words with `{{PARAM}}`. `ax pack bootstrap pcb` writes a six-step empty starter: decide the toolchain, then add checks, evals, capabilities, and scaffolds only after something fails.
+
+`ax propose-upstream` writes a cleaned issue and pull-request draft under `.ax/upstream/`. Absolute paths and anything listed in `.ax/private.txt` are stripped. It does not open GitHub by default.
+
+`ax upgrade --from <dir>` reads a `VERSION` file in that directory, copies any new how-we-work notes, bumps the pin in `ax.yaml`, recompiles, runs checks, and writes `.ax/upgrade/report.md`. Fetch from the network is later.
 
 ## Log size
 
@@ -205,7 +256,16 @@ ax log friction "one line"
 ax log observation "what you found" --method "how you found it"
 ax log decision "short title" [--supersedes older-id]
 ax check [--tier fast|full|slow] [--all]
-ax compile [--target cursor] [--target claude-code]
+ax compile [--target cursor] [--target claude-code] [--without scaffold-id]
+ax eval [--without scaffold-id] [--runs n]
+ax retro
+ax ablate
+ax propose-upstream [--friction id] [--layer machinery|schema|target|pack] [--change text] [--helps-others]
+ax upgrade [--from dir]
+ax pack add <dir>
+ax pack extract <dir> --id <id> [--file path] [--replace old=PARAM]
+ax pack bootstrap <discipline>
+ax init --name <name> --intent <text> [--targets cursor,claude-code]
+ax adopt
+ax doctor
 ```
-
-`--without` on compile is for later experiments. You can ignore it.

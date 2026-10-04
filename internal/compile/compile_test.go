@@ -132,6 +132,40 @@ func TestFixtureCompileCheckStaleness(t *testing.T) {
 	}
 }
 
+func TestBuiltinRecordDecisionLands(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"core/capabilities", "core/scaffolds"} {
+		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(dir)), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Run(root, Options{}, &buf); err != nil {
+		t.Fatalf("compile: %v\n%s", err, buf.String())
+	}
+	for _, rel := range []string{".cursor/commands/record-decision.md", ".claude/skills/record-decision/SKILL.md"} {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			t.Fatalf("missing %s: %v", rel, err)
+		}
+		if !bytes.Contains(data, []byte("ax log decision")) {
+			t.Fatalf("%s missing decision instruction:\n%s", rel, data)
+		}
+		if !bytes.Contains(data, []byte("enforces:")) {
+			t.Fatalf("%s missing check prompt:\n%s", rel, data)
+		}
+	}
+}
+
 func TestTargetSpecUnknownField(t *testing.T) {
 	_, err := targets.Parse([]byte("---\nid: x\ninstructions: A.md\ninvocable: i\nisolated: s\nhooks: h\nhooks_format: cursor-hooks\nmcp: m\nextra: 1\n---\n\nbody\n"))
 	if err == nil || !strings.Contains(err.Error(), "yaml") {

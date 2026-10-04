@@ -51,6 +51,15 @@ func WriteObservation(root, finding, method string, now time.Time) (string, erro
 
 // WriteDecision writes a decision skeleton or piped body and returns its relative path.
 func WriteDecision(root, title, supersedes, body string, now time.Time) (string, error) {
+	return writeDecision(root, title, supersedes, body, false, now)
+}
+
+// WriteReconstructedDecision writes a decision marked as inferred from an existing repo.
+func WriteReconstructedDecision(root, title, body string, now time.Time) (string, error) {
+	return writeDecision(root, title, "", body, true, now)
+}
+
+func writeDecision(root, title, supersedes, body string, reconstructed bool, now time.Time) (string, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return "", fmt.Errorf("decision title is empty")
@@ -61,6 +70,9 @@ func WriteDecision(root, title, supersedes, body string, now time.Time) (string,
 	}
 	return writeEntry(root, "decision", title, now, func(id, date string) string {
 		fm := fmt.Sprintf("id: %s\nkind: decision\ndate: %s\n", id, date)
+		if reconstructed {
+			fm += "reconstructed: true\n"
+		}
 		if supersedes != "" {
 			fm += "supersedes:\n  - " + supersedes + "\n"
 		}

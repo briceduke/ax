@@ -33,6 +33,11 @@ func ParseCapability(path string) (*Capability, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ParseCapabilityBytes(data)
+}
+
+// ParseCapabilityBytes validates capability markdown bytes.
+func ParseCapabilityBytes(data []byte) (*Capability, error) {
 	var cap Capability
 	body, err := DecodeFrontmatter(data, &cap)
 	if err != nil {

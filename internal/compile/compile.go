@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/briceduke/ax/internal/builtins"
 	"github.com/briceduke/ax/internal/core"
 	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/version"
@@ -119,6 +120,10 @@ func loadSnapshot(root, hash string) (*Snapshot, error) {
 		return nil, err
 	}
 	caps, err := core.LoadCapabilities(root)
+	if err != nil {
+		return nil, err
+	}
+	caps, err = mergeBuiltinCapabilities(caps)
 	if err != nil {
 		return nil, err
 	}
@@ -238,6 +243,26 @@ func slashRel(root, target string) string {
 		return filepath.ToSlash(target)
 	}
 	return filepath.ToSlash(rel)
+}
+
+func mergeBuiltinCapabilities(caps []*core.Capability) ([]*core.Capability, error) {
+	builtinsCaps, err := builtins.Capabilities()
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]struct{}{}
+	out := make([]*core.Capability, 0, len(caps)+len(builtinsCaps))
+	for _, c := range caps {
+		seen[c.ID] = struct{}{}
+		out = append(out, c)
+	}
+	for _, c := range builtinsCaps {
+		if _, ok := seen[c.ID]; ok {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out, nil
 }
 
 func withTrailingLF(data []byte) []byte {
