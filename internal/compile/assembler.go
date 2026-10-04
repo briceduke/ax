@@ -1,0 +1,138 @@
+package compile
+
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/targets"
+)
+
+const (
+	hooksClaudeSettings = "claude-settings"
+	hooksCursorHooks    = "cursor-hooks"
+)
+
+// Assembler is a deterministic Writer that follows a target spec.
+type Assembler struct{}
+
+// Write emits adapter files named by spec. It does not invent extra tool paths.
+func (Assembler) Write(spec *targets.Spec, snap *Snapshot) ([]File, error) {
+	var files []File
+	files = append(files, instructionsFile(spec, snap))
+	for _, cap := range snap.Capabilities {
+		if core.HasHint(cap, core.HintInvocable) {
+			files = append(files, capabilityFile(spec.Invocable, cap))
+		}
+		if core.HasHint(cap, core.HintIsolation) {
+			files = append(files, capabilityFile(spec.Isolated, cap))
+		}
+	}
+	hooks, err := hooksFile(spec)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, hooks)
+	files = append(files, mcpFile(spec))
+	return files, nil
+}
+
+func instructionsFile(spec *targets.Spec, snap *Snapshot) File {
+	var b strings.Builder
+	b.WriteString(strings.TrimSpace(snap.Intent))
+	if b.Len() > 0 {
+		b.WriteString("\n\n")
+	}
+	var landing []string
+	if len(snap.Scaffolds) > 0 {
+		b.WriteString("## Scaffolds\n\n")
+		for _, sc := range snap.Scaffolds {
+			fmt.Fprintf(&b, "### %s\n\nCompensates: %s\n\n%s\n\n", sc.ID, sc.Compensates, strings.TrimSpace(sc.Body))
+		}
+	}
+	var always []*core.Capability
+	for _, cap := range snap.Capabilities {
+		if core.HasHint(cap, core.HintInvocable) || core.HasHint(cap, core.HintIsolation) {
+			continue
+		}
+		always = append(always, cap)
+	}
+	if len(always) > 0 {
+		b.WriteString("## Always-on capabilities\n\n")
+		for _, cap := range always {
+			fmt.Fprintf(&b, "### %s\n\nWhen: %s\n\n%s\n\n", cap.ID, cap.When, strings.TrimSpace(cap.Body))
+			landing = append(landing, cap.ID)
+		}
+	}
+	return File{Rel: spec.Instructions, Data: []byte(strings.TrimSpace(b.String()) + "\n"), Landing: landing}
+}
+
+func capabilityFile(pattern string, cap *core.Capability) File {
+	rel := strings.ReplaceAll(pattern, "{id}", cap.ID)
+	body := fmt.Sprintf("---\nname: %s\ndescription: %s\n---\n\n%s\n", cap.ID, strconv.Quote(cap.When), strings.TrimSpace(cap.Body))
+	return File{Rel: rel, Data: []byte(body), Landing: []string{cap.ID}}
+}
+
+func hooksFile(spec *targets.Spec) (File, error) {
+	var data []byte
+	var err error
+	switch spec.HooksFormat {
+	case hooksClaudeSettings:
+		data, err = json.MarshalIndent(claudeSettings{
+			Hooks: map[string][]claudeHookGroup{
+				"PostToolUse": {{
+					Matcher: "Write|Edit",
+					Hooks:   []claudeHook{{Type: "command", Command: fastCheckCommand}},
+				}},
+			},
+		}, "", "  ")
+	case hooksCursorHooks:
+		data, err = json.MarshalIndent(cursorHooksFile{
+			Version: 1,
+			Hooks: map[string][]cursorHook{
+				"afterFileEdit": {{Command: fastCheckCommand}},
+			},
+		}, "", "  ")
+	default:
+		return File{}, fmt.Errorf("unknown hooks_format %q", spec.HooksFormat)
+	}
+	if err != nil {
+		return File{}, err
+	}
+	return File{Rel: spec.Hooks, Data: data}, nil
+}
+
+func mcpFile(spec *targets.Spec) File {
+	data, err := json.MarshalIndent(struct {
+		MCPServers map[string]struct{} `json:"mcpServers"`
+	}{MCPServers: map[string]struct{}{}}, "", "  ")
+	if err != nil {
+		data = []byte("{\"mcpServers\":{}}")
+	}
+	return File{Rel: spec.MCP, Data: data}
+}
+
+type claudeSettings struct {
+	Hooks map[string][]claudeHookGroup `json:"hooks"`
+}
+
+type claudeHookGroup struct {
+	Matcher string       `json:"matcher"`
+	Hooks   []claudeHook `json:"hooks"`
+}
+
+type claudeHook struct {
+	Type    string `json:"type"`
+	Command string `json:"command"`
+}
+
+type cursorHooksFile struct {
+	Version int                     `json:"version"`
+	Hooks   map[string][]cursorHook `json:"hooks"`
+}
+
+type cursorHook struct {
+	Command string `json:"command"`
+}

@@ -1,0 +1,27 @@
+- id: ax-format
+  builtin: ax-format
+  inputs:
+    - log/**/*.md
+    - core/capabilities/*.md
+    - core/scaffolds/*.md
+  tier: fast
+  enforces: log/decisions/2026-10-02-quote-the-datasheet
+- id: ax-consistency
+  builtin: ax-consistency
+  inputs:
+    - core/checks.yaml
+    - core/scaffolds/*.md
+    - log/**/*.md
+  tier: fast
+  enforces: log/decisions/2026-10-02-quote-the-datasheet
+- id: ax-staleness
+  builtin: ax-staleness
+  inputs:
+    - ax.yaml
+    - core/intent.md
+    - core/capabilities/*.md
+    - core/scaffolds/*.md
+    - core/checks.yaml
+    - .generated/manifest.yaml
+  tier: fast
+  enforces: log/decisions/2026-10-02-quote-the-datasheet
