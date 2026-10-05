@@ -21,6 +21,7 @@ import (
 	"github.com/briceduke/ax/internal/retro"
 	"github.com/briceduke/ax/internal/upgrade"
 	"github.com/briceduke/ax/internal/upstream"
+	"github.com/briceduke/ax/internal/version"
 )
 
 func main() {
@@ -59,6 +60,8 @@ func run(args []string) error {
 		return runAdopt(args[1:])
 	case "doctor":
 		return runDoctor(args[1:])
+	case "version":
+		return runVersion()
 	default:
 		return fmt.Errorf("unknown command %q\n%s", args[0], usage())
 	}
@@ -85,6 +88,7 @@ Usage:
   ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--interview]
   ax adopt
   ax doctor [--require-container]
+  ax version
 `) + "\n"
 }
 
@@ -374,6 +378,11 @@ func runAdopt(args []string) error {
 		return err
 	}
 	return onboard.Adopt(cwd, time.Now(), os.Stdout)
+}
+
+func runVersion() error {
+	fmt.Println(version.Version)
+	return nil
 }
 
 func runDoctor(args []string) error {

@@ -3,37 +3,47 @@ package builtins
 import (
 	"embed"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/briceduke/ax/internal/core"
 )
 
 //go:embed capabilities/*.md checks.yaml gitignore
-var fs embed.FS
+var embedded embed.FS
 
 const enforcesToken = "{{enforces}}"
 
-// RecordDecision is the built-in how-we-work note for logging choices.
-func RecordDecision() (*core.Capability, error) {
-	data, err := fs.ReadFile("capabilities/record-decision.md")
-	if err != nil {
-		return nil, err
-	}
-	return core.ParseCapabilityBytes(data)
-}
-
-// Capabilities returns every built-in capability.
+// Capabilities returns every built-in capability, sorted by id.
 func Capabilities() ([]*core.Capability, error) {
-	c, err := RecordDecision()
+	entries, err := embedded.ReadDir("capabilities")
 	if err != nil {
 		return nil, err
 	}
-	return []*core.Capability{c}, nil
+	out := make([]*core.Capability, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		data, err := embedded.ReadFile("capabilities/" + e.Name())
+		if err != nil {
+			return nil, err
+		}
+		c, err := core.ParseCapabilityBytes(data)
+		if err != nil {
+			return nil, fmt.Errorf("capabilities/%s: %w", e.Name(), err)
+		}
+		out = append(out, c)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
 }
 
 // ChecksYAML returns the built-in check list with enforces set to rel.
 func ChecksYAML(enforces string) ([]byte, error) {
-	data, err := fs.ReadFile("checks.yaml")
+	data, err := embedded.ReadFile("checks.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -45,10 +55,10 @@ func ChecksYAML(enforces string) ([]byte, error) {
 
 // Gitignore is the default ignore file body for a new project.
 func Gitignore() ([]byte, error) {
-	return fs.ReadFile("gitignore")
+	return embedded.ReadFile("gitignore")
 }
 
 // CapabilityFile returns the embedded markdown for a built-in capability id.
 func CapabilityFile(id string) ([]byte, error) {
-	return fs.ReadFile("capabilities/" + id + ".md")
+	return embedded.ReadFile("capabilities/" + id + ".md")
 }
