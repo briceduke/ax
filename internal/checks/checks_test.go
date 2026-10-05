@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/version"
 	"github.com/briceduke/ax/targets"
 )
 
@@ -248,7 +249,7 @@ func TestStaleness(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("hello\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	man := "core_hash: " + coreHash + "\nax_version: 0.1.0\nadapters:\n  AGENTS.md: " + core.ContentHash([]byte("hello\n")) + "\n"
+	man := "core_hash: " + coreHash + "\nax_version: " + version.Version + "\nadapters:\n  AGENTS.md: " + core.ContentHash([]byte("hello\n")) + "\n"
 	if err := os.WriteFile(filepath.Join(root, ".generated", "manifest.yaml"), []byte(man), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +291,7 @@ func TestStaleness(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("hello\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	man = "core_hash: " + coreHash + "\nax_version: 0.1.0\nadapters:\n  AGENTS.md: " + core.ContentHash([]byte("hello\n")) + "\n"
+	man = "core_hash: " + coreHash + "\nax_version: " + version.Version + "\nadapters:\n  AGENTS.md: " + core.ContentHash([]byte("hello\n")) + "\n"
 	if err := os.WriteFile(filepath.Join(root, ".generated", "manifest.yaml"), []byte(man), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +311,7 @@ func writeProject(t *testing.T, root, run, enforces string) {
 	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	ax := "ax: 0.1.0\ntargets: []\npacks: []\n"
+	ax := "ax: " + version.Version + "\ntargets: []\npacks: []\n"
 	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte(ax), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -336,7 +337,7 @@ func writeBuiltinProject(t *testing.T, root string, targets []string) {
 	if len(targets) > 0 {
 		targetYAML = "[" + strings.Join(targets, ", ") + "]"
 	}
-	ax := "ax: 0.1.0\ntargets: " + targetYAML + "\npacks: []\n"
+	ax := "ax: " + version.Version + "\ntargets: " + targetYAML + "\npacks: []\n"
 	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte(ax), 0644); err != nil {
 		t.Fatal(err)
 	}

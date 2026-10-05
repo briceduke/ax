@@ -23,6 +23,6 @@ jobs:
           for name in software hardware; do
             d=$(mktemp -d)
             cp -a "testdata/fixtures/${name}/." "$d/"
-            printf 'ax: 0.1.0\ntargets: [cursor, claude-code]\npacks: []\n' > "$d/ax.yaml"
+            printf 'ax: %s\ntargets: [cursor, claude-code]\npacks: []\n' "$(cat VERSION)" > "$d/ax.yaml"
             (cd "$d" && "$AX" compile && "$AX" check)
           done
