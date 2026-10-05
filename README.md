@@ -121,6 +121,8 @@ ax doctor [--require-container]
 ax version
 ```
 
+`ax log decision` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. No pipe writes those headings empty.
+
 `ax init --name` and `--intent` are for tests and scripts. `/ax` is how a person starts. `ax install --home` is how tests write skills without touching a real user home directory.
 
 A save already rewrites the root files. `ax compile` is for hand-edits under `.ax/` and for adding an editor target.

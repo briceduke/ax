@@ -10,7 +10,11 @@ People talk. You save. The next chat already knows.
 
 AGENTS.md and CLAUDE.md stay short: the vision, the few rules that must always be on, and one line per decision still in force. Open a decision file when the work depends on it. Do not paste every writeup into the root files. Do not edit AGENTS.md or CLAUDE.md by hand.
 
-When you save a vision, a decision, a measurement, or a pain note, ax rewrites the root files before the command returns. Do not ask the human to compile.
+Edit `.ax/intent.md` for the vision, then run `ax compile`. Log the rest with these commands. Each one rewrites the root files before it returns. Do not ask the human to compile.
+
+- `ax log decision "<title>"` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. No pipe writes those headings empty.
+- `ax log observation "<finding>" --method "<how>"`
+- `ax log friction "<one line>"`
 
 Offer the rest in chat. They say yes or no:
 

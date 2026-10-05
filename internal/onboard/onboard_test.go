@@ -60,7 +60,7 @@ func TestInitCheckPasses(t *testing.T) {
 		if !strings.Contains(string(data), "adopt ax for harness management") {
 			t.Fatalf("%s missing decision line:\n%s", rel, data)
 		}
-		if strings.Contains(string(data), "## Context") {
+		if strings.Contains(string(data), "Ad-hoc markdown rules") {
 			t.Fatalf("%s pasted a full decision writeup:\n%s", rel, data)
 		}
 	}
