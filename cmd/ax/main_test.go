@@ -56,7 +56,7 @@ func TestEvalHardwareWritesScores(t *testing.T) {
 	if !strings.Contains(stdout, "cross-discipline-impact") || !strings.Contains(stdout, "harness-format") || !strings.Contains(stdout, "idle-current-range") {
 		t.Fatalf("stdout = %q", stdout)
 	}
-	entries, err := os.ReadDir(filepath.Join(dst, "log", "observations"))
+	entries, err := os.ReadDir(filepath.Join(dst, ".ax", "observations"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,6 +78,31 @@ func TestVersionPrintsConstWithoutRepo(t *testing.T) {
 	}
 	if !strings.Contains(usage(), "ax version") {
 		t.Fatal("usage missing ax version")
+	}
+	if !strings.Contains(usage(), "ax install") || !strings.Contains(usage(), "ax notes") {
+		t.Fatal("usage missing install/notes")
+	}
+}
+
+func TestInstallWritesSkillsUnderHome(t *testing.T) {
+	home := t.TempDir()
+	stdout, stderr := capture(t, func() error {
+		return run([]string{"install", "--home", home})
+	})
+	if stderr != "" {
+		t.Fatalf("stderr = %q", stderr)
+	}
+	if !strings.Contains(stdout, "wrote /ax skills") {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	for _, rel := range []string{".cursor/skills/ax/SKILL.md", ".claude/skills/ax/SKILL.md"} {
+		data, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(rel)))
+		if err != nil {
+			t.Fatalf("missing %s: %v", rel, err)
+		}
+		if !strings.Contains(string(data), "disable-model-invocation: true") {
+			t.Fatalf("%s = %s", rel, data)
+		}
 	}
 }
 

@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/briceduke/ax/internal/checks"
+	"github.com/briceduke/ax/internal/compile"
+	"github.com/briceduke/ax/internal/logbook"
+	"github.com/briceduke/ax/internal/project"
 )
 
 func TestInitCheckPasses(t *testing.T) {
@@ -32,7 +35,7 @@ func TestInitCheckPasses(t *testing.T) {
 		t.Fatalf("check after init: %v\n%s", err, buf.String())
 	}
 	for _, id := range []string{"own-the-harness", "log-friction", "sync-harness", "record-decision"} {
-		if _, err := os.Stat(filepath.Join(root, "core", "capabilities", id+".md")); err != nil {
+		if _, err := os.Stat(filepath.Join(root, ".ax", "capabilities", id+".md")); err != nil {
 			t.Fatalf("init missing capability %s: %v", id, err)
 		}
 	}
@@ -54,6 +57,85 @@ func TestInitCheckPasses(t *testing.T) {
 		if !strings.Contains(string(data), "own-the-harness") {
 			t.Fatalf("%s missing own-the-harness:\n%s", rel, data)
 		}
+		if !strings.Contains(string(data), "adopt ax for harness management") {
+			t.Fatalf("%s missing decision line:\n%s", rel, data)
+		}
+		if strings.Contains(string(data), "## Context") {
+			t.Fatalf("%s pasted a full decision writeup:\n%s", rel, data)
+		}
+	}
+	for _, name := range []string{"core", "log", "packs", "ax.yaml", ".generated"} {
+		if _, err := os.Stat(filepath.Join(root, name)); !os.IsNotExist(err) {
+			t.Fatalf("software init left %s at root: %v", name, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "record")); !os.IsNotExist(err) {
+		t.Fatal("software init should not create record/")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".ax", "ax.yaml")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestInitNotesRecordMirrorsNotes(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	var buf bytes.Buffer
+	err := Init(root, InitOptions{
+		Name:    "probe",
+		Intent:  "A hardware notebook.",
+		Targets: "cursor,claude-code",
+		Notes:   "record",
+		Now:     now,
+	}, &buf)
+	if err != nil {
+		t.Fatalf("init: %v\n%s", err, buf.String())
+	}
+	for _, rel := range []string{
+		"record/intent.md",
+		"record/decisions/2026-10-04-adopt-ax-for-harness-management.md",
+	} {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel))); err != nil {
+			t.Fatalf("missing %s: %v", rel, err)
+		}
+	}
+	if err := project.HideNotes(root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "record")); !os.IsNotExist(err) {
+		t.Fatal("hide should remove record/")
+	}
+	if err := project.ShowNotes(root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "record", "intent.md")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLogDecisionRewritesAgents(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	var buf bytes.Buffer
+	if err := Init(root, InitOptions{Name: "w", Intent: "widget", Targets: "cursor,claude-code", Now: now}, &buf); err != nil {
+		t.Fatalf("init: %v\n%s", err, buf.String())
+	}
+	later := now.Add(time.Hour)
+	if _, err := logbook.WriteDecision(root, "use bun", "", "## Context\n\nRuntime.\n\n## Options\n\n- npm\n- bun\n\n## Choice\n\nbun.\n\n## Why\n\nSpeed.\n", later); err != nil {
+		t.Fatal(err)
+	}
+	if err := compile.Refresh(root); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "use bun") {
+		t.Fatalf("AGENTS.md missing new decision:\n%s", data)
+	}
+	if strings.Contains(string(data), "Runtime.") {
+		t.Fatalf("AGENTS.md pasted decision body:\n%s", data)
 	}
 }
 
@@ -67,14 +149,14 @@ func TestAdoptMarksReconstructed(t *testing.T) {
 	if err := Adopt(root, now, &buf); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(filepath.Join(root, "log", "decisions", "2026-10-04-adopt-ax-from-existing-repo.md"))
+	data, err := os.ReadFile(filepath.Join(root, ".ax", "decisions", "2026-10-04-adopt-ax-from-existing-repo.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(data), "reconstructed: true") {
 		t.Fatalf("decision = %s", data)
 	}
-	checksYAML, err := os.ReadFile(filepath.Join(root, "core", "checks.yaml"))
+	checksYAML, err := os.ReadFile(filepath.Join(root, ".ax", "checks.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +224,7 @@ func TestInitInterviewWritesIntentAndDecisions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("init: %v\n%s", err, buf.String())
 	}
-	intent, err := os.ReadFile(filepath.Join(root, "core", "intent.md"))
+	intent, err := os.ReadFile(filepath.Join(root, ".ax", "intent.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +238,7 @@ func TestInitInterviewWritesIntentAndDecisions(t *testing.T) {
 		"2026-10-04-choose-the-product-toolchain.md",
 		"2026-10-04-set-process-weight.md",
 	} {
-		if _, err := os.Stat(filepath.Join(root, "log", "decisions", name)); err != nil {
+		if _, err := os.Stat(filepath.Join(root, ".ax", "decisions", name)); err != nil {
 			t.Fatal(err)
 		}
 	}

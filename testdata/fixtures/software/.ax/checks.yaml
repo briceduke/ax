@@ -8,7 +8,7 @@
     - .ax/scaffolds/*.md
     - .ax/evals/*.md
   tier: fast
-  enforces: {{enforces}}
+  enforces: .ax/decisions/2026-10-01-adopt-ax-for-harness-management
 - id: ax-consistency
   builtin: ax-consistency
   inputs:
@@ -18,7 +18,7 @@
     - .ax/observations/*.md
     - .ax/friction/*.md
   tier: fast
-  enforces: {{enforces}}
+  enforces: .ax/decisions/2026-10-01-adopt-ax-for-harness-management
 - id: ax-staleness
   builtin: ax-staleness
   inputs:
@@ -31,4 +31,4 @@
     - .ax/manifest.yaml
     - .ax/decisions/*.md
   tier: fast
-  enforces: {{enforces}}
+  enforces: .ax/decisions/2026-10-01-adopt-ax-for-harness-management

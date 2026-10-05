@@ -7,10 +7,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/yamlx"
 )
 
-// Manifest is the staleness sidecar at .generated/manifest.yaml.
+// Manifest is the staleness sidecar at .ax/manifest.yaml.
 type Manifest struct {
 	CoreHash  string            `yaml:"core_hash"`
 	AxVersion string            `yaml:"ax_version"`
@@ -18,11 +19,13 @@ type Manifest struct {
 }
 
 // ManifestPath is the slash-separated path of the compile manifest.
-const ManifestPath = ".generated/manifest.yaml"
+func ManifestPath() string {
+	return project.Rel("manifest.yaml")
+}
 
-// LoadManifest reads .generated/manifest.yaml. Missing file returns (nil, nil).
+// LoadManifest reads .ax/manifest.yaml. Missing file returns (nil, nil).
 func LoadManifest(root string) (*Manifest, error) {
-	path := filepath.Join(root, filepath.FromSlash(ManifestPath))
+	path := filepath.Join(root, filepath.FromSlash(ManifestPath()))
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -40,17 +43,16 @@ func LoadManifest(root string) (*Manifest, error) {
 	return &man, nil
 }
 
-// SaveManifest writes .generated/manifest.yaml with sorted adapter keys.
+// SaveManifest writes .ax/manifest.yaml with sorted adapter keys.
 func SaveManifest(root string, man *Manifest) error {
-	dir := filepath.Join(root, ".generated")
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(project.DirPath(root), 0755); err != nil {
 		return err
 	}
 	if man.Adapters == nil {
 		man.Adapters = map[string]string{}
 	}
 	data := encodeManifest(man)
-	return os.WriteFile(filepath.Join(dir, "manifest.yaml"), data, 0644)
+	return os.WriteFile(project.Join(root, "manifest.yaml"), data, 0644)
 }
 
 func encodeManifest(man *Manifest) []byte {

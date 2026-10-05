@@ -14,6 +14,7 @@ import (
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/compile"
 	"github.com/briceduke/ax/internal/eval"
+	"github.com/briceduke/ax/internal/install"
 	"github.com/briceduke/ax/internal/logbook"
 	"github.com/briceduke/ax/internal/onboard"
 	"github.com/briceduke/ax/internal/pack"
@@ -58,6 +59,10 @@ func run(args []string) error {
 		return runInit(args[1:])
 	case "adopt":
 		return runAdopt(args[1:])
+	case "notes":
+		return runNotes(args[1:])
+	case "install":
+		return runInstall(args[1:])
 	case "doctor":
 		return runDoctor(args[1:])
 	case "version":
@@ -85,8 +90,10 @@ Usage:
   ax pack add <dir>
   ax pack extract <dir> --id <id> [--file <path>] [--replace old=PARAM]
   ax pack bootstrap <discipline>
-  ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--interview]
+	ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--notes record] [--interview]
   ax adopt
+  ax notes show|hide
+  ax install [--home <dir>]
   ax doctor [--require-container]
   ax version
 `) + "\n"
@@ -139,6 +146,9 @@ func runLog(args []string) error {
 		return fmt.Errorf("unknown log kind %q", kind)
 	}
 	if err != nil {
+		return err
+	}
+	if err := compile.Refresh(root); err != nil {
 		return err
 	}
 	fmt.Println(path)
@@ -214,7 +224,10 @@ func runEval(args []string) error {
 		LogRoot:  orig,
 		Runner:   agent.Detect(),
 	}, os.Stdout)
-	return err
+	if err != nil {
+		return err
+	}
+	return compile.Refresh(orig)
 }
 
 func runRetro(args []string) error {
@@ -359,6 +372,7 @@ func runInit(args []string) error {
 	name := fs.String("name", "", "project name")
 	intent := fs.String("intent", "", "what is being built")
 	targets := fs.String("targets", "cursor,claude-code", "comma-separated editor targets")
+	notes := fs.String("notes", "", "record if the notes are the work")
 	interview := fs.Bool("interview", false, "ask the full start questions")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -371,6 +385,7 @@ func runInit(args []string) error {
 		Name:      *name,
 		Intent:    *intent,
 		Targets:   *targets,
+		Notes:     *notes,
 		Interview: *interview,
 		IsTTY:     isTTY(os.Stdin),
 		Stdin:     os.Stdin,
@@ -387,6 +402,50 @@ func runAdopt(args []string) error {
 		return err
 	}
 	return onboard.Adopt(cwd, time.Now(), os.Stdout)
+}
+
+func runNotes(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: ax notes show|hide")
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		return err
+	}
+	switch args[0] {
+	case "show":
+		if err := project.ShowNotes(root); err != nil {
+			return err
+		}
+	case "hide":
+		if err := project.HideNotes(root); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("usage: ax notes show|hide")
+	}
+	return compile.Refresh(root)
+}
+
+func runInstall(args []string) error {
+	fs := newFlagSet("install")
+	home := fs.String("home", "", "directory that contains .cursor and .claude")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	dir := *home
+	if dir == "" {
+		var err error
+		dir, err = os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+	}
+	if err := install.WriteSkills(dir); err != nil {
+		return err
+	}
+	fmt.Println("wrote /ax skills")
+	return nil
 }
 
 func runVersion() error {

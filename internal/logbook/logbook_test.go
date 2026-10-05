@@ -27,7 +27,7 @@ func TestSlugify(t *testing.T) {
 func TestMintIDCollisionSuffix(t *testing.T) {
 	root := t.TempDir()
 	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
-	dir := filepath.Join(root, "log", "friction")
+	dir := filepath.Join(root, ".ax", "friction")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestWriteAndValidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rel != "log/friction/2026-10-02-agent-re-derived-the-battery-math.md" {
+	if rel != ".ax/friction/2026-10-02-agent-re-derived-the-battery-math.md" {
 		t.Fatalf("rel = %s", rel)
 	}
 	if err := ValidateFile(filepath.Join(root, filepath.FromSlash(rel)), "friction"); err != nil {

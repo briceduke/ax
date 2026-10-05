@@ -147,7 +147,42 @@ func parseFriction(data []byte) (*Friction, error) {
 	return &f, nil
 }
 
-// LoadFriction parses every friction entry under log/friction.
+// LoadDecisions parses every decision under .ax/decisions.
+func LoadDecisions(root string) ([]*Decision, error) {
+	rels, err := core.ListMarkdown(root, RelDir("decision"))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Decision, 0, len(rels))
+	for _, rel := range rels {
+		d, err := ParseDecision(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", rel, err)
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+// InForce returns decisions that no later decision has superseded.
+func InForce(decisions []*Decision) []*Decision {
+	superseded := map[string]struct{}{}
+	for _, d := range decisions {
+		for _, id := range d.Supersedes {
+			superseded[id] = struct{}{}
+		}
+	}
+	out := make([]*Decision, 0, len(decisions))
+	for _, d := range decisions {
+		if _, ok := superseded[d.ID]; ok {
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// LoadFriction parses every friction entry under .ax/friction.
 func LoadFriction(root string) ([]*Friction, error) {
 	rels, err := core.ListMarkdown(root, RelDir("friction"))
 	if err != nil {
@@ -164,7 +199,7 @@ func LoadFriction(root string) ([]*Friction, error) {
 	return out, nil
 }
 
-// LoadObservations parses every observation entry under log/observations.
+// LoadObservations parses every observation entry under .ax/observations.
 func LoadObservations(root string) ([]*Observation, error) {
 	rels, err := core.ListMarkdown(root, RelDir("observation"))
 	if err != nil {

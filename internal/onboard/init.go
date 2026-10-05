@@ -27,6 +27,7 @@ type InitOptions struct {
 	Constraints   string
 	Team          string
 	ProcessWeight string
+	Notes         string
 	Interview     bool
 	Now           time.Time
 	Stdin         io.Reader
@@ -34,12 +35,13 @@ type InitOptions struct {
 }
 
 var treeDirs = []string{
-	"core/capabilities",
-	"core/scaffolds",
-	"core/evals",
-	"log/decisions",
-	"log/observations",
-	"log/friction",
+	project.Rel("capabilities"),
+	project.Rel("scaffolds"),
+	project.Rel("evals"),
+	project.Rel("decisions"),
+	project.Rel("observations"),
+	project.Rel("friction"),
+	project.Rel("packs"),
 }
 
 const productDockerfile = `FROM debian:bookworm-slim
@@ -66,6 +68,7 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 		Ax:      version.Version,
 		Targets: splitCSV(opts.Targets),
 		Packs:   []string{},
+		Notes:   opts.Notes,
 	}
 	if err := project.Save(root, cfg); err != nil {
 		return err
@@ -80,7 +83,7 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 	if err := os.WriteFile(filepath.Join(root, "Dockerfile"), []byte(productDockerfile), 0644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte(intentDoc(opts)), 0644); err != nil {
+	if err := os.WriteFile(project.Join(root, "intent.md"), []byte(intentDoc(opts)), 0644); err != nil {
 		return err
 	}
 	caps, err := builtins.Capabilities()
@@ -108,10 +111,10 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), checksYAML, 0644); err != nil {
+	if err := os.WriteFile(project.Join(root, "checks.yaml"), checksYAML, 0644); err != nil {
 		return err
 	}
-	if err := compile.Run(root, compile.Options{}, out); err != nil {
+	if err := compile.Refresh(root); err != nil {
 		return err
 	}
 	fmt.Fprintln(out, "initialized", root)
@@ -122,6 +125,7 @@ func fillInit(opts *InitOptions) error {
 	if opts.Targets == "" {
 		opts.Targets = "cursor,claude-code"
 	}
+	opts.Notes = normalizeNotes(opts.Notes)
 	interactive := opts.Interview || opts.IsTTY
 	if !interactive {
 		if opts.Name == "" || opts.Intent == "" {
@@ -155,6 +159,10 @@ func fillInit(opts *InitOptions) error {
 	if err := prompt(r, "Process weight (low/medium/high)? ", &opts.ProcessWeight); err != nil {
 		return err
 	}
+	if err := prompt(r, "Are the notes the work, or is the code the work? ", &opts.Notes); err != nil {
+		return err
+	}
+	opts.Notes = normalizeNotes(opts.Notes)
 	if opts.Name == "" || opts.Intent == "" {
 		return fmt.Errorf("ax init needs a name and a one-line intent")
 	}
@@ -172,6 +180,17 @@ func prompt(r *bufio.Reader, label string, dest *string) error {
 	}
 	*dest = strings.TrimSpace(line)
 	return nil
+}
+
+func normalizeNotes(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	if s == "" || s == "code" || s == "software" {
+		return ""
+	}
+	if strings.Contains(s, "note") || s == project.NotesRecord || s == "research" || s == "hardware" {
+		return project.NotesRecord
+	}
+	return ""
 }
 
 func splitCSV(s string) []string {
@@ -334,6 +353,6 @@ func writeCapability(root string, cap *core.Capability) error {
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(root, "core", "capabilities", cap.ID+".md")
+	path := project.Join(root, "capabilities", cap.ID+".md")
 	return os.WriteFile(path, data, 0644)
 }

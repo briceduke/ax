@@ -11,7 +11,7 @@ import (
 
 func TestParseAndScriptGrade(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "core/evals/harness-format.md", `---
+	writeFile(t, root, ".ax/evals/harness-format.md", `---
 id: harness-format
 related: [scaffold/verify-pinouts]
 runs: 3
@@ -21,15 +21,15 @@ task: >
 grader:
   kind: script
   check: ax-format
-  file: core/intent.md
+  file: .ax/intent.md
   number:
     file: measurements/idle-ma.txt
     min: 3
     max: 6
 `)
-	writeFile(t, root, "core/intent.md", "# Intent\n")
+	writeFile(t, root, ".ax/intent.md", "# Intent\n")
 	writeFile(t, root, "measurements/idle-ma.txt", "4.1\n")
-	ev, err := ParseFile(filepath.Join(root, "core", "evals", "harness-format.md"))
+	ev, err := ParseFile(filepath.Join(root, ".ax", "evals", "harness-format.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ grader:
 
 func TestRubricStandInAndInjectedGrader(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "core/evals/readable.md", `---
+	writeFile(t, root, ".ax/evals/readable.md", `---
 id: readable
 related: []
 runs: 2
@@ -62,8 +62,8 @@ grader:
   kind: rubric
   must: ["hardware fixture"]
 `)
-	writeFile(t, root, "core/intent.md", "A hardware fixture used to test ax.\n")
-	ev, err := ParseFile(filepath.Join(root, "core", "evals", "readable.md"))
+	writeFile(t, root, ".ax/intent.md", "A hardware fixture used to test ax.\n")
+	ev, err := ParseFile(filepath.Join(root, ".ax", "evals", "readable.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ grader:
 	if !strings.Contains(buf.String(), "ok   readable 1/1") {
 		t.Fatalf("output = %q", buf.String())
 	}
-	obs := filepath.Join(root, "log", "observations", "2026-10-04-eval-readable-1-1.md")
+	obs := filepath.Join(root, ".ax", "observations", "2026-10-04-eval-readable-1-1.md")
 	data, err := os.ReadFile(obs)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ extra: 1
 task: t
 grader:
   kind: script
-  file: core/intent.md
+  file: .ax/intent.md
 `))
 	if err == nil || !strings.Contains(err.Error(), "yaml") {
 		t.Fatalf("error = %v, want unknown field", err)
@@ -114,7 +114,7 @@ grader:
 
 func TestRubricSkipsWithoutRunner(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "core/evals/readable.md", `---
+	writeFile(t, root, ".ax/evals/readable.md", `---
 id: readable
 related: []
 runs: 1
@@ -124,7 +124,7 @@ grader:
   kind: rubric
   must: ["hardware fixture"]
 `)
-	writeFile(t, root, "core/intent.md", "A hardware fixture used to test ax.\n")
+	writeFile(t, root, ".ax/intent.md", "A hardware fixture used to test ax.\n")
 	var buf bytes.Buffer
 	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
 	results, err := Run(root, Options{Now: now, Runs: 1}, &buf)
@@ -138,12 +138,12 @@ grader:
 		t.Fatalf("output = %q", buf.String())
 	}
 	found := false
-	entries, err := os.ReadDir(filepath.Join(root, "log", "observations"))
+	entries, err := os.ReadDir(filepath.Join(root, ".ax", "observations"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		data, err := os.ReadFile(filepath.Join(root, "log", "observations", e.Name()))
+		data, err := os.ReadFile(filepath.Join(root, ".ax", "observations", e.Name()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -159,7 +159,7 @@ grader:
 
 func TestFakeRunnerThenGrade(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "core/evals/ran.md", `---
+	writeFile(t, root, ".ax/evals/ran.md", `---
 id: ran
 related: []
 runs: 1

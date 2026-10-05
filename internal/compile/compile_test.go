@@ -39,7 +39,7 @@ func TestRecompileWhenCoreChanges(t *testing.T) {
 	if err := Run(root, Options{}, &buf); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n\nchanged\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n\nchanged\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	buf.Reset()
@@ -95,7 +95,7 @@ func TestFixtureCompileCheckStaleness(t *testing.T) {
 	src := filepath.Join(repo, "testdata", "fixtures", "hardware")
 	root := t.TempDir()
 	copyTestTree(t, src, root)
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
@@ -123,7 +123,7 @@ func TestFixtureCompileCheckStaleness(t *testing.T) {
 	if err := os.WriteFile(agents, orig, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n\nedited without compile\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n\nedited without compile\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	buf.Reset()
@@ -135,7 +135,7 @@ func TestFixtureCompileCheckStaleness(t *testing.T) {
 
 func TestToolsCompileIntoMCP(t *testing.T) {
 	root := writeCompileProject(t)
-	if err := os.WriteFile(filepath.Join(root, "core", "tools.yaml"), []byte("- name: notes\n  command: python\n  args: [notes.py]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "tools.yaml"), []byte("- name: notes\n  command: python\n  args: [notes.py]\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
@@ -228,18 +228,18 @@ func readFile(t *testing.T, path string) string {
 
 func TestBuiltinRecordDecisionLands(t *testing.T) {
 	root := t.TempDir()
-	for _, dir := range []string{"core/capabilities", "core/scaffolds"} {
+	for _, dir := range []string{".ax/capabilities", ".ax/scaffolds"} {
 		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(dir)), 0755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
@@ -315,7 +315,7 @@ func assertAdapters(t *testing.T, root string) {
 		".claude/settings.json",
 		".cursor/mcp.json",
 		".mcp.json",
-		".generated/manifest.yaml",
+		".ax/manifest.yaml",
 	}
 	mustExist = append(mustExist, skillRels("record-decision")...)
 	mustExist = append(mustExist, skillRels("log-friction")...)
@@ -372,30 +372,30 @@ func skillRels(id string) []string {
 func writeCompileProject(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	for _, dir := range []string{"core/capabilities", "core/scaffolds", "log/friction"} {
+	for _, dir := range []string{".ax/capabilities", ".ax/scaffolds", ".ax/friction"} {
 		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(dir)), 0755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n\nA compile fixture.\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n\nA compile fixture.\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	capInv := "---\nid: record-decision\nkind: capability\nwhen: a choice is made\nhints: [user-invocable]\n---\n\nWrite it down.\n"
-	if err := os.WriteFile(filepath.Join(root, "core", "capabilities", "record-decision.md"), []byte(capInv), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "capabilities", "record-decision.md"), []byte(capInv), 0644); err != nil {
 		t.Fatal(err)
 	}
 	capIso := "---\nid: isolate-work\nkind: capability\nwhen: work must not share context\nhints: [isolation]\n---\n\nUse a fresh agent.\n"
-	if err := os.WriteFile(filepath.Join(root, "core", "capabilities", "isolate-work.md"), []byte(capIso), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "capabilities", "isolate-work.md"), []byte(capIso), 0644); err != nil {
 		t.Fatal(err)
 	}
 	sc := "---\nid: verify-pinouts\nkind: scaffold\ncompensates: invented pins\nadded: 2026-10-02 (friction/2026-10-02-wrong-pin)\nretire_when: eval passes\n---\n\nQuote the table.\n"
-	if err := os.WriteFile(filepath.Join(root, "core", "scaffolds", "verify-pinouts.md"), []byte(sc), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "scaffolds", "verify-pinouts.md"), []byte(sc), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return root

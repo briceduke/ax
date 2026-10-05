@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/briceduke/ax/internal/builtins"
+	"github.com/briceduke/ax/internal/compile"
 	"github.com/briceduke/ax/internal/logbook"
 	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/version"
@@ -18,7 +19,7 @@ func Adopt(root string, now time.Time, out io.Writer) error {
 	if now.IsZero() {
 		now = time.Now()
 	}
-	if _, err := os.Stat(filepath.Join(root, "ax.yaml")); os.IsNotExist(err) {
+	if _, err := os.Stat(project.Join(root, "ax.yaml")); os.IsNotExist(err) {
 		cfg := &project.Config{Ax: version.Version, Targets: []string{"cursor", "claude-code"}, Packs: []string{}}
 		if err := project.Save(root, cfg); err != nil {
 			return err
@@ -31,7 +32,7 @@ func Adopt(root string, now time.Time, out io.Writer) error {
 			return err
 		}
 	}
-	intentPath := filepath.Join(root, "core", "intent.md")
+	intentPath := project.Join(root, "intent.md")
 	if _, err := os.Stat(intentPath); os.IsNotExist(err) {
 		name := filepath.Base(root)
 		if err := os.WriteFile(intentPath, []byte(intentDoc(InitOptions{Name: name, Intent: "Existing project " + name + "."})), 0644); err != nil {
@@ -45,7 +46,7 @@ func Adopt(root string, now time.Time, out io.Writer) error {
 		return err
 	}
 	for _, cap := range caps {
-		path := filepath.Join(root, "core", "capabilities", cap.ID+".md")
+		path := project.Join(root, "capabilities", cap.ID+".md")
 		if _, err := os.Stat(path); err == nil {
 			continue
 		} else if !os.IsNotExist(err) {
@@ -80,7 +81,7 @@ Inferred from existing files. Treat this decision as reconstructed, not freshly 
 	if err != nil {
 		return err
 	}
-	checksPath := filepath.Join(root, "core", "checks.yaml")
+	checksPath := project.Join(root, "checks.yaml")
 	if _, err := os.Stat(checksPath); os.IsNotExist(err) {
 		data, err := builtins.ChecksYAML(rel)
 		if err != nil {
@@ -93,6 +94,9 @@ Inferred from existing files. Treat this decision as reconstructed, not freshly 
 			return err
 		}
 	} else if err != nil {
+		return err
+	}
+	if err := compile.Refresh(root); err != nil {
 		return err
 	}
 	fmt.Fprintln(out, rel)

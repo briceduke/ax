@@ -40,13 +40,13 @@ Three kinds of files:
 
 **Thrown away and regenerated.** `AGENTS.md`, `CLAUDE.md`, skills, hooks, MCP JSON.
 
-**Built:** the lasting files, the temporary notes, scored evals, Cursor / Claude Code generated files, optional `core/tools.yaml` → MCP JSON, and local pack/upstream/upgrade drafts.
+**Built:** the lasting files, the temporary notes, scored evals, Cursor / Claude Code generated files, optional `.ax/tools.yaml` → MCP JSON, and local pack/upstream/upgrade drafts.
 
 **Started:** generating editor files is a fixed assembler by default. `AX_COMPILE_AGENT=1` can let a local CLI write adapters; the program still checks the result. Rubric evals need that same CLI or they are logged as skipped.
 
 ## Starting a project
 
-**Built.** `ax init --name --intent` writes the minimum tree, a `Dockerfile`, the built-in notes (`own-the-harness`, `log-friction`, `sync-harness`, `record-decision`), the first decision, and compiles. `--interview` or a TTY asks the project name, what you are building, for whom, disciplines, constraints, who is on the team, and process weight, and writes those into intent plus toolchain/process decisions. Values and Taste stay Correctness and Short files unless you change them later. `ax adopt` reads an existing repo, writes an intent stub, and can register `go test ./...` if it finds Go.
+**Built.** `/ax` (after `ax install`) is the conversation that creates a project. `ax init --name --intent` stays for tests and scripts. `--notes record` puts vision, decisions, measurements, and pain notes in `record/` as well as `.ax/`. `--interview` or a TTY asks what you are making, who it is for, and whether the notes are the work. `ax adopt` reads an existing repo. After `.ax` exists, ordinary chat uses `AGENTS.md` / `CLAUDE.md`.
 
 ## The log
 
@@ -60,9 +60,7 @@ One file per note, named with a date and a short slug, so two people can add fil
 
 ## Generating editor files
 
-You run `ax compile`. It reads what you wrote and writes the files each editor wants. If nothing changed, it stops. If you edit a generated file, checks fail until you compile again from the source.
-
-Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools.
+You save a vision, decision, measurement, or pain note. ax rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. Those files stay short: the vision, always-on rules, and one line per decision in force. Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools. The `.ax` record does not move.
 
 **Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, the check that catches a stale copy, `own-the-harness` in `AGENTS.md` / `CLAUDE.md`, user-invocable skills at `.cursor/skills/{id}/SKILL.md` and `.claude/skills/{id}/SKILL.md` (`log-friction`, `sync-harness`, `record-decision`), and optional tools.yaml compiled into `.cursor/mcp.json` / `.mcp.json`.
 
@@ -78,7 +76,7 @@ Supporting a new editor should mean adding one short description of where that e
 
 ## Tests of the harness, and deleting workarounds
 
-A few short tasks under `core/evals/`. A script or a rubric scores them. `ax eval` writes the scores into the log. `ax ablate` generates the editor files without a temporary note and compares scores. If the score holds, it proposes deleting the note. A person still decides.
+A few short tasks under `.ax/evals/`. A script or a rubric scores them. `ax eval` writes the scores into the log. `ax ablate` generates the editor files without a temporary note and compares scores. If the score holds, it proposes deleting the note. A person still decides.
 
 **Built:** eval format, script graders, rubric skip-without-CLI, optional headless `agent` / `cursor agent` / `claude` runner, ablation, and three hardware-fixture evals.
 
@@ -104,7 +102,7 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 
 ## Same environment everywhere
 
-`ax doctor` checks `ax.yaml`, `ax check`, and that `ax` is on PATH. If Docker is installed and a `Dockerfile` exists, it builds and runs `ax check` in the container. Missing Docker prints `container not verified` and passes unless you pass `--require-container`.
+`ax doctor` checks `.ax/ax.yaml`, `ax check`, and that `ax` is on PATH. If Docker is installed and a `Dockerfile` exists, it builds and runs `ax check` in the container. Missing Docker prints `container not verified` and passes unless you pass `--require-container`. The agent runs this on another machine without being asked.
 
 **Built:** doctor, a committed Dockerfile, and a thin `.devcontainer`. Init writes a product Dockerfile.
 
@@ -112,11 +110,13 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 
 | Command | What it is for | Status |
 | --- | --- | --- |
-| `ax log …` | Write a decision, observation, or friction note | Built |
+| `ax log …` | Write a decision, observation, or friction note (rewrites root files) | Built |
 | `ax check` | Run the project’s tests | Built |
-| `ax compile` | Write the editor files from what you authored | Built (assembler default; optional agent) |
-| `ax init` | Start a new project | Built (full interview on TTY or `--interview`) |
+| `ax compile` | Refresh editor files after a hand-edit or a new target | Built (assembler default; optional agent) |
+| `ax init` | Start a new project (tests/scripts; `/ax` is how a person starts) | Built |
 | `ax adopt` | Add ax to a repo that already exists | Built |
+| `ax notes show\|hide` | Move the same notes into or out of `record/` | Built |
+| `ax install` | Write the `/ax` skill under a home directory | Built |
 | `ax eval` | Run the harness tests and log scores | Built (agent CLI if present; otherwise scripts run and rubrics skip) |
 | `ax ablate` | See if a temporary note is still needed | Built |
 | `ax retro` | Propose cuts and fixes from logged friction | Built (no auto-merge) |
@@ -137,4 +137,4 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 | 5. Retro | One retro writes a proposal that includes a deletion | Built (human still merges) |
 | 6. Drop workarounds | Ablation writes numbers and a keep-or-drop proposal | Built (human still deletes) |
 | 7. Share upstream | A fix becomes local upstream files and CI runs on ax itself | Built (gh issue optional; no auto-merge) |
-| 8. Packs and start | A third project starts with `ax init` only | Built |
+| 8. Packs and start | A third project starts with `/ax` | Built |

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/yamlx"
 )
 
@@ -23,7 +24,7 @@ var tierRank = map[string]int{
 	TierSlow: 2,
 }
 
-// Check is one registry entry from core/checks.yaml.
+// Check is one registry entry from .ax/checks.yaml.
 type Check struct {
 	ID       string   `yaml:"id"`
 	Run      string   `yaml:"run,omitempty"`
@@ -33,20 +34,20 @@ type Check struct {
 	Enforces string   `yaml:"enforces,omitempty"`
 }
 
-// LoadRegistry reads core/checks.yaml and rejects unknown fields.
+// LoadRegistry reads .ax/checks.yaml and rejects unknown fields.
 func LoadRegistry(root string) ([]Check, error) {
-	path := filepath.Join(root, "core", "checks.yaml")
+	path := project.Join(root, "checks.yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read core/checks.yaml: %w", err)
+		return nil, fmt.Errorf("read %s: %w", project.Rel("checks.yaml"), err)
 	}
 	var list []Check
 	if err := yamlx.Decode(data, &list); err != nil {
-		return nil, fmt.Errorf("core/checks.yaml: %w", err)
+		return nil, fmt.Errorf("%s: %w", project.Rel("checks.yaml"), err)
 	}
 	for i := range list {
 		if err := validateCheck(&list[i]); err != nil {
-			return nil, fmt.Errorf("core/checks.yaml: %w", err)
+			return nil, fmt.Errorf("%s: %w", project.Rel("checks.yaml"), err)
 		}
 	}
 	return list, nil

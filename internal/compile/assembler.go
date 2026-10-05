@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/logbook"
 	"github.com/briceduke/ax/targets"
 )
 
@@ -46,25 +47,32 @@ func instructionsFile(spec *targets.Spec, snap *Snapshot) File {
 		b.WriteString("\n\n")
 	}
 	var landing []string
-	if len(snap.Scaffolds) > 0 {
-		b.WriteString("## Scaffolds\n\n")
-		for _, sc := range snap.Scaffolds {
-			fmt.Fprintf(&b, "### %s\n\nCompensates: %s\n\n%s\n\n", sc.ID, sc.Compensates, strings.TrimSpace(sc.Body))
+	alwaysOn := false
+	writeAlwaysOn := func() {
+		if alwaysOn {
+			return
 		}
+		b.WriteString("## Always-on\n\n")
+		alwaysOn = true
 	}
-	var always []*core.Capability
+	for _, sc := range snap.Scaffolds {
+		writeAlwaysOn()
+		fmt.Fprintf(&b, "### %s\n\nCompensates: %s\n\n%s\n\n", sc.ID, sc.Compensates, strings.TrimSpace(sc.Body))
+	}
 	for _, cap := range snap.Capabilities {
 		if core.HasHint(cap, core.HintInvocable) || core.HasHint(cap, core.HintIsolation) {
 			continue
 		}
-		always = append(always, cap)
+		writeAlwaysOn()
+		fmt.Fprintf(&b, "### %s\n\nWhen: %s\n\n%s\n\n", cap.ID, cap.When, strings.TrimSpace(cap.Body))
+		landing = append(landing, cap.ID)
 	}
-	if len(always) > 0 {
-		b.WriteString("## Always-on capabilities\n\n")
-		for _, cap := range always {
-			fmt.Fprintf(&b, "### %s\n\nWhen: %s\n\n%s\n\n", cap.ID, cap.When, strings.TrimSpace(cap.Body))
-			landing = append(landing, cap.ID)
+	if len(snap.Decisions) > 0 {
+		b.WriteString("## Decisions in force\n\n")
+		for _, d := range snap.Decisions {
+			fmt.Fprintf(&b, "- %s (`.ax/decisions/%s.md`)\n", logbook.TitleFromID(d.ID), d.ID)
 		}
+		b.WriteString("\n")
 	}
 	return File{Rel: spec.Instructions, Data: []byte(strings.TrimSpace(b.String()) + "\n"), Landing: landing}
 }

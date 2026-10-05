@@ -92,7 +92,7 @@ func TestInputHashIncludesCoreFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# changed\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# changed\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	h2, err := InputHash(root)
@@ -130,7 +130,7 @@ func TestCompileHashIncludesTargetSpec(t *testing.T) {
 func TestCompileHashExcludesScaffold(t *testing.T) {
 	root := t.TempDir()
 	writeCore(t, root)
-	dir := filepath.Join(root, "core", "scaffolds")
+	dir := filepath.Join(root, ".ax", "scaffolds")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -157,10 +157,10 @@ func TestLoadTools(t *testing.T) {
 	if err != nil || len(tools) != 0 {
 		t.Fatalf("missing file: %v %#v", err, tools)
 	}
-	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".ax"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "tools.yaml"), []byte("- name: notes\n  command: python\n  args: [notes.py]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "tools.yaml"), []byte("- name: notes\n  command: python\n  args: [notes.py]\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	tools, err = LoadTools(root)
@@ -170,7 +170,7 @@ func TestLoadTools(t *testing.T) {
 	if len(tools) != 1 || tools[0].Name != "notes" || tools[0].Command != "python" || len(tools[0].Args) != 1 {
 		t.Fatalf("tools = %#v", tools)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "tools.yaml"), []byte("- name: notes\n  command: python\n  extra: 1\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "tools.yaml"), []byte("- name: notes\n  command: python\n  extra: 1\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	_, err = LoadTools(root)
@@ -181,13 +181,13 @@ func TestLoadTools(t *testing.T) {
 
 func writeCore(t *testing.T, root string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".ax"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 }

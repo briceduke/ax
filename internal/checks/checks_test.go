@@ -155,7 +155,7 @@ func TestRunnerExternalPassFailAndCache(t *testing.T) {
 		t.Fatalf("helper ran %d times after --all, want 2", strings.Count(string(data), "x"))
 	}
 
-	writeProject(t, root, helperRun("fail"), "log/decisions/2026-10-01-adopt-ax-for-harness-management")
+	writeProject(t, root, helperRun("fail"), ".ax/decisions/2026-10-01-adopt-ax-for-harness-management")
 	writeDecision(t, root)
 	buf.Reset()
 	err = Run(root, Options{Tier: TierFull, All: true}, &buf)
@@ -169,7 +169,7 @@ func TestRunnerExternalPassFailAndCache(t *testing.T) {
 	if !strings.Contains(out, "helper failed") {
 		t.Fatalf("missing helper output: %q", out)
 	}
-	if !strings.Contains(out, "enforces log/decisions/2026-10-01-adopt-ax-for-harness-management") {
+	if !strings.Contains(out, "enforces .ax/decisions/2026-10-01-adopt-ax-for-harness-management") {
 		t.Fatalf("missing enforces: %q", out)
 	}
 	if !strings.Contains(out, "Checks replace prose rules") {
@@ -195,7 +195,7 @@ func TestE2EFixturesPassThenCorruptFails(t *testing.T) {
 			if err := Run(dst, Options{Tier: TierFull}, &buf); err != nil {
 				t.Fatalf("expected pass: %v\n%s", err, buf.String())
 			}
-			bad := filepath.Join(dst, "log", "friction", "2026-10-02-broken.md")
+			bad := filepath.Join(dst, ".ax", "friction", "2026-10-02-broken.md")
 			if err := os.MkdirAll(filepath.Dir(bad), 0755); err != nil {
 				t.Fatal(err)
 			}
@@ -243,27 +243,27 @@ func TestStaleness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(root, ".generated"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".ax"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("hello\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	man := "core_hash: " + coreHash + "\nax_version: " + version.Version + "\nadapters:\n  AGENTS.md: " + core.ContentHash([]byte("hello\n")) + "\n"
-	if err := os.WriteFile(filepath.Join(root, ".generated", "manifest.yaml"), []byte(man), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "manifest.yaml"), []byte(man), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := checkStaleness(root); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# changed\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# changed\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	err = checkStaleness(root)
 	if err == nil || !strings.Contains(err.Error(), "core hash changed") {
 		t.Fatalf("error = %v, want core hash changed", err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("hello\n"), 0644); err != nil {
@@ -292,7 +292,7 @@ func TestStaleness(t *testing.T) {
 		t.Fatal(err)
 	}
 	man = "core_hash: " + coreHash + "\nax_version: " + version.Version + "\nadapters:\n  AGENTS.md: " + core.ContentHash([]byte("hello\n")) + "\n"
-	if err := os.WriteFile(filepath.Join(root, ".generated", "manifest.yaml"), []byte(man), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "manifest.yaml"), []byte(man), 0644); err != nil {
 		t.Fatal(err)
 	}
 	err = checkStaleness(root)
@@ -308,14 +308,14 @@ func extraFor(t *testing.T, ids []string) (map[string][]byte, error) {
 
 func writeProject(t *testing.T, root, run, enforces string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".ax"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	ax := "ax: " + version.Version + "\ntargets: []\npacks: []\n"
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte(ax), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "ax.yaml"), []byte(ax), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	enforcesLine := ""
@@ -323,14 +323,14 @@ func writeProject(t *testing.T, root, run, enforces string) {
 		enforcesLine = "  enforces: " + enforces + "\n"
 	}
 	checks := "- id: helper\n  run: " + strconv.Quote(run) + "\n  inputs: []\n  tier: full\n" + enforcesLine
-	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), []byte(checks), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "checks.yaml"), []byte(checks), 0644); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func writeBuiltinProject(t *testing.T, root string, targets []string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, ".ax"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	targetYAML := "[]"
@@ -338,20 +338,20 @@ func writeBuiltinProject(t *testing.T, root string, targets []string) {
 		targetYAML = "[" + strings.Join(targets, ", ") + "]"
 	}
 	ax := "ax: " + version.Version + "\ntargets: " + targetYAML + "\npacks: []\n"
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte(ax), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "ax.yaml"), []byte(ax), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".ax", "checks.yaml"), []byte("[]\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func writeDecision(t *testing.T, root string) {
 	t.Helper()
-	dir := filepath.Join(root, "log", "decisions")
+	dir := filepath.Join(root, ".ax", "decisions")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatal(err)
 	}

@@ -34,10 +34,10 @@ func TestAddExtractBootstrap(t *testing.T) {
 	if err := Add(root, packDir, &buf); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "core", "capabilities", "keep-files-short.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, ".ax", "capabilities", "keep-files-short.md")); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := os.ReadFile(filepath.Join(root, "ax.yaml"))
+	cfg, err := os.ReadFile(filepath.Join(root, ".ax", "ax.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestAddExtractBootstrap(t *testing.T) {
 
 	outDir := t.TempDir()
 	buf.Reset()
-	if err := Extract(root, outDir, "short-files", []string{"core/capabilities/keep-files-short.md"}, map[string]string{"Keep files short": "RULE"}, &buf); err != nil {
+	if err := Extract(root, outDir, "short-files", []string{".ax/capabilities/keep-files-short.md"}, map[string]string{"Keep files short": "RULE"}, &buf); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(filepath.Join(outDir, "capabilities", "keep-files-short.md"))
@@ -61,7 +61,7 @@ func TestAddExtractBootstrap(t *testing.T) {
 	if err := Bootstrap(root, "pcb", &buf); err != nil {
 		t.Fatal(err)
 	}
-	guide, err := os.ReadFile(filepath.Join(root, "packs", "pcb-starter", "README.md"))
+	guide, err := os.ReadFile(filepath.Join(root, ".ax", "packs", "pcb-starter", "README.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

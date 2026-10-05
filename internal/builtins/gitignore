@@ -1,1 +1,5 @@
-.ax/
+.ax/worktrees/
+.ax/retro/
+.ax/upstream/
+.ax/upgrade/
+.ax/ablate/

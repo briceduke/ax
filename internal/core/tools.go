@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/yamlx"
 )
 
-const ToolsFile = "core/tools.yaml"
+// ToolsFile is the optional MCP server list under .ax/.
+var ToolsFile = project.Rel("tools.yaml")
 
 // Tool is one local stdio MCP server compiled into editor mcp.json files.
 type Tool struct {
@@ -18,7 +20,7 @@ type Tool struct {
 	Args    []string `yaml:"args"`
 }
 
-// LoadTools reads optional core/tools.yaml. Missing file is empty, not an error.
+// LoadTools reads optional .ax/tools.yaml. Missing file is empty, not an error.
 func LoadTools(root string) ([]Tool, error) {
 	path := filepath.Join(root, filepath.FromSlash(ToolsFile))
 	data, err := os.ReadFile(path)
@@ -33,11 +35,11 @@ func LoadTools(root string) ([]Tool, error) {
 	}
 	var tools []Tool
 	if err := yamlx.Decode(data, &tools); err != nil {
-		return nil, fmt.Errorf("core/tools.yaml: %w", err)
+		return nil, fmt.Errorf("%s: %w", ToolsFile, err)
 	}
 	for i, t := range tools {
 		if strings.TrimSpace(t.Name) == "" || strings.TrimSpace(t.Command) == "" {
-			return nil, fmt.Errorf("core/tools.yaml: item %d needs name and command", i)
+			return nil, fmt.Errorf("%s: item %d needs name and command", ToolsFile, i)
 		}
 		if t.Args == nil {
 			tools[i].Args = []string{}

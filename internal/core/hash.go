@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/briceduke/ax/internal/project"
 )
 
 // NormalizeLF rewrites CRLF to LF so hashes match across Windows and Linux.
@@ -100,12 +102,12 @@ func CompileHash(root string, extra map[string][]byte, without []string) (string
 
 func coreFiles(root string, without []string) ([]string, error) {
 	var files []string
-	for _, p := range []string{"core/intent.md", "core/checks.yaml", ToolsFile} {
+	for _, p := range []string{project.Rel("intent.md"), project.Rel("checks.yaml"), ToolsFile} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(p))); err == nil {
 			files = append(files, p)
 		}
 	}
-	caps, err := ListMarkdown(root, "core/capabilities")
+	caps, err := ListMarkdown(root, project.Rel("capabilities"))
 	if err != nil {
 		return nil, err
 	}
@@ -115,11 +117,16 @@ func coreFiles(root string, without []string) ([]string, error) {
 		return nil, err
 	}
 	files = append(files, scaffolds...)
+	decs, err := ListMarkdown(root, project.Rel("decisions"))
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, decs...)
 	return files, nil
 }
 
 func listActiveScaffolds(root string, without []string) ([]string, error) {
-	rels, err := ListMarkdown(root, "core/scaffolds")
+	rels, err := ListMarkdown(root, project.Rel("scaffolds"))
 	if err != nil {
 		return nil, err
 	}

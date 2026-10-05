@@ -38,13 +38,13 @@ func TestAblateProposesRetirementWhenWithoutHolds(t *testing.T) {
 	if !strings.Contains(string(proposal), "verify-pinouts") {
 		t.Fatalf("proposal = %s", proposal)
 	}
-	entries, err := os.ReadDir(filepath.Join(root, "log", "observations"))
+	entries, err := os.ReadDir(filepath.Join(root, ".ax", "observations"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	found := false
 	for _, e := range entries {
-		data, err := os.ReadFile(filepath.Join(root, "log", "observations", e.Name()))
+		data, err := os.ReadFile(filepath.Join(root, ".ax", "observations", e.Name()))
 		if err != nil {
 			t.Fatal(err)
 		}

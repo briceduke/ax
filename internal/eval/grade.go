@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/briceduke/ax/internal/project"
 )
 
 // Result is the score of one eval after all runs.
@@ -106,12 +108,15 @@ func (rubricGrader) Grade(root string, ev *Eval) error {
 
 func collectText(root string) (string, error) {
 	var b strings.Builder
-	for _, dir := range []string{"core", "log"} {
-		err := filepath.Walk(filepath.Join(root, dir), func(path string, info os.FileInfo, err error) error {
+	for _, dir := range []string{project.Dir, project.RecordDir} {
+		start := filepath.Join(root, dir)
+		if _, err := os.Stat(start); os.IsNotExist(err) {
+			continue
+		} else if err != nil {
+			return "", err
+		}
+		err := filepath.Walk(start, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				if os.IsNotExist(err) {
-					return nil
-				}
 				return err
 			}
 			if info.IsDir() {

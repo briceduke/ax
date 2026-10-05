@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/project"
 )
 
 // WorktreeDir is the local copy used for compile --without experiments.
@@ -47,7 +48,7 @@ func isolate(root, without string) (string, error) {
 }
 
 func scaffoldRel(root, id string) (string, error) {
-	rels, err := core.ListMarkdown(root, "core/scaffolds")
+	rels, err := core.ListMarkdown(root, project.Rel("scaffolds"))
 	if err != nil {
 		return "", err
 	}
@@ -87,8 +88,8 @@ func copyTree(src, dst string) error {
 		if err != nil {
 			return err
 		}
-		base := filepath.Base(path)
-		if (base == ".git" || base == ".ax") && info.IsDir() && path != src {
+		slash := filepath.ToSlash(rel)
+		if info.IsDir() && (slash == ".git" || slash == ".ax/worktrees") {
 			return filepath.SkipDir
 		}
 		target := filepath.Join(dst, rel)
