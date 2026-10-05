@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/briceduke/ax/compare/v0.2.1...v0.3.0) (2026-10-05)
+
+
+### Features
+
+* ax upgrade replaces the running binary from GitHub Releases ([#6](https://github.com/briceduke/ax/issues/6)) ([f358bf9](https://github.com/briceduke/ax/commit/f358bf92b90fbb1bfd4e20b50190d90dbad3b2f2))
+
 ## [0.2.1](https://github.com/briceduke/ax/compare/v0.2.0...v0.2.1) (2026-10-05)
 
 
