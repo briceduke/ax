@@ -1,117 +1,61 @@
 # Using ax on a new software project
 
-4 October 2026. This is how a first week is supposed to work once the later phases exist. It is not all built today.
+4 October 2026. This is how a first week is supposed to feel. You talk. The agent saves. The next chat already knows.
 
 The product is **spend**. A TypeScript CLI. You drop bank CSVs in `inbox/`. It prints a monthly report: total, and totals by category. One person. Evenings. Sunday night there is no repo. There is an empty folder.
 
 This is a story, not a spec. The bank files are made up.
 
-## 1. Empty folder, interview, pack
+## 1. Empty folder
 
-Download `ax_*_windows_amd64.exe` from the latest GitHub Release and put it on your PATH as `ax`. Open a new terminal and run `ax version`. After that, `ax upgrade` replaces the binary. `go build` is only for changing ax itself.
+Download `ax_*_windows_amd64.exe` from the latest GitHub Release and put it on your PATH as `ax`. Open a new terminal, run `ax version`, then `ax install`. After that, `ax upgrade` replaces the binary. `go build` is only for changing ax itself.
 
 ```powershell
 mkdir spend
 cd spend
-ax init
 ```
 
-Init asks. You answer. It writes the thin tree from those answers. You do not create folders by hand. Values and Taste stay Correctness and Short files unless you change them later.
+Open the folder in Cursor. Type `/ax`. The agent asks. You answer. It creates the project. You do not create folders by hand. Values and Taste stay Correctness and Short files unless you change them later.
 
 ```
-Project name: spend
-What are you building? A CLI that reads bank CSVs from inbox/ and prints a monthly spend report.
-For whom? One person who exports a checking account once a month.
-Disciplines (software, hardware, ...)? software
-Constraints? No extra packages unless we ask. Categories come from a file we edit, not from a guess.
-Who is on the team? One person.
-Process weight (low/medium/high)? low
+What are you making? A CLI that reads bank CSVs from inbox/ and prints a monthly spend report.
+Who is it for? One person who exports a checking account once a month.
+Are the notes the work, or is the code the work? The code is the work.
 ```
 
-Then a pack offer. A pack is a reusable how-we-work bundle from other products in the same discipline. Updates later arrive as a merge you can refuse.
+The agent may also ask disciplines, constraints, team, and process weight. Then a pack offer. A pack is a reusable how-we-work bundle from other products in the same discipline. Updates later arrive as a merge you can refuse.
 
-**If a TypeScript/Node pack exists:**
+If a TypeScript/Node pack exists, the agent asks whether to add it. If not, it asks whether to bootstrap an empty TypeScript starter. Either way, process stays thin until something fails.
 
-```
-Found a TypeScript/Node pack.
-Add it? [Y/n] Y
-```
+`AGENTS.md` and `CLAUDE.md` are already written. The next chat has the vision. `ax check` should pass. You have not written app code.
 
-Init copies it into `packs/typescript-node/` (the local copy of that bundle) and merges what the pack provides into `core/`. This week the pack is thin on purpose: bun as the default runtime, and a reminder to write toolchain choices down. No lint religion. No extra rules for a product that has not failed yet.
-
-**If no pack exists:**
-
-```
-No TypeScript/Node pack on this machine.
-Bootstrap an empty TypeScript starter? [Y/n] Y
-```
-
-That is the same as `ax pack bootstrap typescript`. You get `packs/typescript-starter/` with empty slots and a six-step note that says: add process only after something fails. The rest of this week is the same either way.
-
-Init also compiles once, so Cursor and Claude Code already have files to read. `ax check` should pass. You have not written app code.
-
-What is on disk, in plain language:
+What is on disk:
 
 | Path | What it is |
 | --- | --- |
-| `core/intent.md` | What spend is. The only long note that lasts. Filled from the interview. |
-| `core/capabilities/` | Repeatable jobs you want the agent to keep doing. Init put four files here: `own-the-harness`, `log-friction`, `sync-harness`, and `record-decision`. |
-| `core/scaffolds/` | Temporary “the model still gets this wrong” notes. Empty. |
-| `core/evals/` | Short scored tasks for later. Empty. |
-| `core/checks.yaml` | The built-in tests: file shape, links that exist, generated files still match. |
-| `log/decisions/` | Choices. Init wrote adopt ax, plus a toolchain decision and a process-weight decision from the interview. |
-| `log/observations/` | Dated facts. Empty. |
-| `log/friction/` | One-line “this hurt.” Empty. |
-| `ax.yaml` | Which editors, which ax version, which packs. |
-| `AGENTS.md`, `CLAUDE.md` | Copies for Cursor and Claude Code. Do not edit them. |
+| `AGENTS.md`, `CLAUDE.md` | Short copies for the next chat. Do not edit them. |
+| `.ax/intent.md` | What spend is. |
+| `.ax/capabilities/` | Repeatable jobs. Init put four files here. |
+| `.ax/scaffolds/` | Temporary model-weakness notes. Empty. |
+| `.ax/evals/` | Short scored tasks for later. Empty. |
+| `.ax/checks.yaml` | Built-in tests: file shape, links that exist, generated files still match. |
+| `.ax/decisions/` | Choices. Init wrote adopt ax, plus toolchain/process if the interview ran. |
+| `.ax/observations/` | Dated facts. Empty. |
+| `.ax/friction/` | One-line “this hurt.” Empty. |
+| `.ax/ax.yaml` | Which editors, which ax version, which packs. |
+| `.cursor/`, `.claude/` | Hooks and skills. |
 
-Open `core/intent.md` if you want to see the product in one page:
+There is no `record/` folder. The code is the work. If this had been a hardware notebook, the same vision and decisions would also show up in `record/`.
 
-```markdown
-# Intent
-
-## What is being built
-
-A CLI that reads bank CSVs from inbox/ and prints a monthly spend report.
-
-## For whom
-
-One person who exports a checking account once a month.
-
-## Disciplines
-
-software
-
-## Constraints
-
-No extra packages unless we ask. Categories come from a file we edit, not from a guess.
-
-## Team
-
-One person.
-
-## Values
-
-Correctness.
-
-## Taste
-
-Short files.
-
-## Process weight
-
-low
-```
-
-That is the whole process pile on day one: intent, four built-in how-we-work notes, built-in checks, and a pack that barely speaks. Specialization waits for a real failure.
+You do not type `/ax` again for ordinary work.
 
 ## 2. First toolchain choice
 
-You still have no parser. You need a runtime. The pack (or the bootstrap starter) asked you to write this down, not to pretend it is obvious.
+You still have no parser. You need a runtime.
 
 In Cursor, say that you want bun and TypeScript. The agent records that choice. You can type `/record-decision` if you want that skill immediately.
 
-The agent writes `log/decisions/2026-10-04-use-bun-and-typescript.md` and fills the four sections. Do not leave them blank.
+The agent writes `.ax/decisions/2026-10-04-use-bun-and-typescript.md` and fills the four sections. Do not leave them blank. That save rewrites `AGENTS.md` with one new line. There is no compile step for you.
 
 ```markdown
 ## Context
@@ -135,11 +79,9 @@ One tool for install, run, and test. No extra packages until we ask.
 
 The agent also asks: can a machine test this? Not yet. There is no `package.json`. Do not add a check for a file that does not exist.
 
-The agent then runs `ax compile` and `ax check`. `ax compile` rewrites the editor files from what you authored. A second compile with no changes does nothing. `ax check` should still pass.
+You talk to Cursor as usual. You do not paste the intent. You do not remind it to log decisions. That is already in `AGENTS.md`. You still say the task for today, in plain words.
 
-You talk to Cursor as usual. You do not paste the intent. You do not remind it to log decisions or compile. That is already in `AGENTS.md`. You still say the task for today, in plain words.
-
-## 3. Wednesday: the first real failure
+## 3. The first real failure
 
 You want Chase checking CSVs to parse. In Cursor:
 
@@ -153,30 +95,30 @@ Then, in chat:
 
 > Take lodash out. Split the CSV in this repo. Do not add packages.
 
-You do not want this again. You also do not want a merge that was never tested. Say those two rules in chat. The agent records both. You can type `/record-decision` if you want that skill immediately.
+You do not want this again. You also do not want a merge that was never tested. Say those two rules in chat. The agent records both.
 
 The agent fills Context, Options, Choice, Why on each. For the first: keep the built-in CSV tools, or add a package only after a person says yes. For the second: a report that was never run against a known file is not done.
 
-A rule a machine can test should not stay a paragraph. In the same change, the agent adds checks to `core/checks.yaml` (the list of commands that must stay true). Point `enforces:` at the decision each check is keeping honest. When a check fails, ax prints that decision’s Why.
+A rule a machine can test should not stay a paragraph. In the same change, the agent adds checks to `.ax/checks.yaml`. Point `enforces:` at the decision each check is keeping honest. When a check fails, ax prints that decision’s Why. Hooks already run checks after edits. If one fails, the agent says so.
 
 ```yaml
 - id: unit-tests
   run: bun test
   inputs: [src/**, testdata/**]
   tier: full
-  enforces: log/decisions/2026-10-07-tests-must-pass-before-merge
+  enforces: .ax/decisions/2026-10-07-tests-must-pass-before-merge
 - id: allowed-packages
   run: bun run checks/allowed-packages.ts
   inputs: [package.json, bun.lock, checks/allowed-packages.ts]
   tier: fast
-  enforces: log/decisions/2026-10-07-no-extra-npm-packages-without-asking
+  enforces: .ax/decisions/2026-10-07-no-extra-npm-packages-without-asking
 ```
 
-`run` is a program and its arguments. No pipes or `&&`. `full` is the default for `ax check`. `fast` also runs after every edit, once the hooks exist.
+`run` is a program and its arguments. No pipes or `&&`.
 
 The agent writes a tiny `checks/allowed-packages.ts` that fails if `package.json` lists a name you did not allow, plus one fixture CSV and a test that checks the September totals.
 
-You can also have the agent add a how-we-work note so it sees the rule before it types. One file in `core/capabilities/`:
+You can also have the agent add a how-we-work note so it sees the rule before it types. One file in `.ax/capabilities/`:
 
 ```markdown
 ---
@@ -188,38 +130,30 @@ when: the work seems to need a new npm package
 Stop. Name the package and why. Do not edit package.json until a person says yes.
 ```
 
-No `hints` line. ax copies this into `AGENTS.md` and `CLAUDE.md`. The agent is supposed to do it on its own.
-
-Then the agent runs `ax compile` and `ax check`.
+No `hints` line. That text is an always-on rule in `AGENTS.md`. The agent is supposed to do it on its own.
 
 If `bun test` fails, ax fails, and it points at “tests must pass before merge.” Fix the test in chat, not the generated files.
 
-Wednesday night, spend has two extra rules. Both came from a failure you watched. Nothing else was added “in case.”
+Spend has two extra rules. Both came from a failure you watched. Nothing else was added “in case.”
 
 ## 4. What Cursor is reading
 
-You still do not edit `AGENTS.md` or `CLAUDE.md`. Those are copies. If you change `core/intent.md` or add a how-we-work note, the agent compiles again. If you edit `AGENTS.md` by hand, `ax check` fails on purpose.
-
-What compile wrote for Cursor:
+You still do not edit `AGENTS.md` or `CLAUDE.md`. Those are copies. Saving a decision already rewrites them. If you change `.ax/intent.md` or add a how-we-work note by hand, the agent refreshes. If you edit `AGENTS.md` by hand, `ax check` fails on purpose.
 
 | File | What it is |
 | --- | --- |
-| `AGENTS.md` | Your intent, plus notes with no `hints` (like `own-the-harness` and `ask-before-deps`). Cursor reads this at the start of a chat. |
+| `AGENTS.md` | Vision, always-on rules, one line per decision in force. Cursor reads this at the start of a chat. |
 | `.cursor/hooks.json` | After a file save, Cursor runs `ax check --tier fast`. |
-| `.cursor/skills/{id}/SKILL.md` | Notes marked `hints: [user-invocable]`. After init you have `log-friction`, `sync-harness`, and `record-decision`. |
-| `.cursor/agents/` | Only if a note is marked `hints: [isolation]`. A separate agent file. |
+| `.cursor/skills/{id}/SKILL.md` | Notes marked `hints: [user-invocable]`. |
+| `.cursor/agents/` | Only if a note is marked `hints: [isolation]`. |
 
 Claude Code gets the same content in `CLAUDE.md`, plus its own hooks and skills.
 
-If you want a skill you can type, add `hints: [user-invocable]` to a how-we-work note. We did not need a second one this week. `/record-decision` and the dep note with no hints were enough.
+## 5. Repeated pain
 
-## 5. Thursday: friction becomes a scored task
+Later the agent adds `date-fns` to parse a posted date. Same class of failure. The agent logs it: `the agent added date-fns to parse CSV dates`.
 
-Thursday you ask for a “other” category for unmapped merchants. The agent adds `date-fns` to parse the posted date. Same class of failure. The agent logs it: `the agent added date-fns to parse CSV dates`.
-
-In chat, take the package out. The check already fails if it stays. That is not enough: you want to know whether the *instruction* still works when a new model shows up.
-
-Ask the agent to add a short scored task in `core/evals/` (the folder for tests of whether an agent still follows a rule):
+In chat, take the package out. The check already fails if it stays. The same pain showed up again, so the agent suggests a short scored task that checks whether it still follows the rule. You say yes or no.
 
 ```markdown
 ---
@@ -235,40 +169,17 @@ grader:
   check: allowed-packages
 ```
 
-Ask in chat for `ax eval`. It runs the task, scores it, and writes a dated fact under `log/observations/` (the folder for measurements and how you got them). Something like `eval no-unasked-deps 2/3`. Two out of three still sneaks a package in. The check would have caught the merge. The how-we-work note is not wasted yet.
+Ask in chat when you want scores. It writes a dated fact under `.ax/observations/`. Something like `eval no-unasked-deps 2/3`. Two out of three still sneaks a package in. The check would have caught the merge. The how-we-work note is not wasted yet.
 
-When something is a fact about the product, not a choice and not a score, say it in chat. The agent logs an observation. Example: September Chase export totals 1842.17, compared to the bank website.
+When something is a fact about the product, not a choice and not a score, say it in chat. The agent saves the measurement and how you got it.
 
-## 6. Weekend: retro
+## 6. Cut what you no longer need
 
-Anyone can log friction in seconds. On a schedule, you ask the agent to run `ax retro`.
+Anyone can log friction in seconds. When you want a cut, say so in chat. The agent runs retro. That is a proposal, not a merge. Open it.
 
-It prints a path like `.ax/retro/2026-10-11-proposal.md`. That is a proposal, not a merge. Open it.
+Every retro tries to delete something. If a reminder looks outdated, the agent asks to drop it. You say yes or no. If the scored task still fails without the note, keep it. The check stays either way. The paragraph does not get to live forever.
 
-```markdown
-## Problems
-
-- the agent added lodash to split CSV columns (1 note)
-- the agent added date-fns to parse CSV dates (1 note)
-
-## Proposed evals
-
-- None. Existing evals cover the recurring friction, or there is not enough repetition yet.
-
-## Core changes
-
-- Keep instructions that still have a failing related eval.
-
-## Deletions
-
-- Delete the shortest always-on how-we-work note that duplicates a check.
-```
-
-Every retro tries to delete something. This one points at `ask-before-deps`: you already have `allowed-packages`. You look at the 2/3 score and keep the note. Next retro can try again. If the score had been 3/3, tell the agent to delete the note. It compiles and checks. The check stays. The paragraph does not get to live forever.
-
-You apply what you accept. Then the agent compiles and checks.
-
-That is the week. Start empty. Answer a few questions. Take a pack or bootstrap. Say the task. The agent logs friction, writes decisions, compiles, and checks. You approve the diff. When it hurts twice, ask for a scored task. Ask for a retro when you want a cut. Do not edit an old decision. The agent writes a new one. If it replaces an old one, the new file names the old id.
+That is the week. Start empty. Type `/ax`. Answer a few questions. Say the task. The agent saves. You approve the diff. When it hurts twice, it offers a rule or a scored task. You never learn a Thursday command.
 
 ## 7. What the human actually types
 
@@ -278,40 +189,36 @@ Download `ax_*_windows_amd64.exe` from the latest GitHub Release. Put it on PATH
 
 ```powershell
 ax version
+ax install
 ```
 
 After that, `ax upgrade` replaces the binary.
 
-**Sunday, in the terminal**
+**In an empty folder**
 
 ```powershell
 mkdir spend
 cd spend
-ax init
 ```
 
-Answer the interview. Take the TypeScript/Node pack, or bootstrap, if offered.
+Open Cursor. Type `/ax`. Answer the questions. Take the pack or bootstrap if offered.
 
-**Sunday, in Cursor**
-
-Open the folder. In chat, say the first task:
+**In chat**
 
 > Use bun and TypeScript. Parse Chase checking CSVs in `inbox/`. Print month, total spent, and totals by category. Categories come from `categories.yaml`. Do not add packages.
 
-The agent records the toolchain, compiles, and checks. You approve the diff. Type `/record-decision` only if you want that skill right now.
+The agent records the toolchain. The next chat already has it. You approve the diff.
 
 **When it adds lodash**
 
-In chat:
-
 > Take lodash out. Split the CSV in this repo. Do not add packages.
 
-The agent logs the friction, records the two decisions, adds the checks, compiles, and checks. You approve the diff.
+The agent logs the friction, records the two decisions, and adds the checks. You approve the diff.
 
-**Thursday, when it adds a package again**
+**When it adds a package again**
 
-In chat: take date-fns out. Add a scored task that forbids unasked packages. Ask for `ax eval` when you want scores.
+In chat: take it out. Yes to a scored task if offered.
 
-**Weekend**
+**When you want a cut**
 
 In chat: run a retro. Read the proposal. Keep or delete. Do not accept a merge you did not look at.

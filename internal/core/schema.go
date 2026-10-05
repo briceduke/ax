@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/briceduke/ax/internal/project"
 )
 
 // Capability is the strict capability frontmatter schema.
@@ -115,9 +117,9 @@ const (
 	HintIsolation = "isolation"
 )
 
-// LoadCapabilities parses every capability markdown file under core/capabilities.
+// LoadCapabilities parses every capability markdown file under .ax/capabilities.
 func LoadCapabilities(root string) ([]*Capability, error) {
-	rels, err := ListMarkdown(root, "core/capabilities")
+	rels, err := ListMarkdown(root, project.Rel("capabilities"))
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +136,7 @@ func LoadCapabilities(root string) ([]*Capability, error) {
 
 // LoadScaffolds parses scaffold files, omitting ids in without.
 func LoadScaffolds(root string, without []string) ([]*Scaffold, error) {
-	rels, err := ListMarkdown(root, "core/scaffolds")
+	rels, err := ListMarkdown(root, project.Rel("scaffolds"))
 	if err != nil {
 		return nil, err
 	}

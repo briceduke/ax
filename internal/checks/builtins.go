@@ -39,33 +39,13 @@ func checkFormat(root string) error {
 
 func formatLog(root string) []string {
 	var errs []string
-	logRoot := filepath.Join(root, "log")
-	dirs, err := os.ReadDir(logRoot)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return []string{err.Error()}
-	}
-	for _, d := range dirs {
-		if !d.IsDir() {
-			continue
-		}
-		kind, ok := logbook.KindFromDir(d.Name())
-		if !ok {
-			errs = append(errs, "unknown log directory: "+d.Name())
-			continue
-		}
-		entries, err := os.ReadDir(filepath.Join(logRoot, d.Name()))
+	for _, kind := range []string{"decision", "observation", "friction"} {
+		relDir := logbook.RelDir(kind)
+		files, err := core.ListMarkdown(root, relDir)
 		if err != nil {
-			errs = append(errs, err.Error())
-			continue
+			return []string{err.Error()}
 		}
-		for _, e := range entries {
-			if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
-				continue
-			}
-			rel := "log/" + d.Name() + "/" + e.Name()
+		for _, rel := range files {
 			path := filepath.Join(root, filepath.FromSlash(rel))
 			if err := logbook.ValidateFile(path, kind); err != nil {
 				errs = append(errs, rel+": "+err.Error())
@@ -76,7 +56,7 @@ func formatLog(root string) []string {
 }
 
 func formatCapabilities(root string) []string {
-	files, err := core.ListMarkdown(root, "core/capabilities")
+	files, err := core.ListMarkdown(root, project.Rel("capabilities"))
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -90,7 +70,7 @@ func formatCapabilities(root string) []string {
 }
 
 func formatScaffolds(root string) []string {
-	files, err := core.ListMarkdown(root, "core/scaffolds")
+	files, err := core.ListMarkdown(root, project.Rel("scaffolds"))
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -104,7 +84,7 @@ func formatScaffolds(root string) []string {
 }
 
 func formatEvals(root string) []string {
-	files, err := core.ListMarkdown(root, "core/evals")
+	files, err := core.ListMarkdown(root, project.Rel("evals"))
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -134,7 +114,7 @@ func checkConsistency(root string) error {
 }
 
 func loadDecisions(root string) (map[string]*logbook.Decision, error) {
-	files, err := core.ListMarkdown(root, "log/decisions")
+	files, err := core.ListMarkdown(root, logbook.RelDir("decision"))
 	if err != nil {
 		return nil, err
 	}
@@ -190,10 +170,10 @@ func checkSupersedes(root string, decisions map[string]*logbook.Decision) []stri
 	return errs
 }
 
-var frictionRef = regexp.MustCompile(`(?:log/)?friction/([a-z0-9]+(?:-[a-z0-9]+)*)`)
+var frictionRef = regexp.MustCompile(`(?:(?:log|\.ax)/)?friction/([a-z0-9]+(?:-[a-z0-9]+)*)`)
 
 func checkScaffoldAdded(root string) []string {
-	files, err := core.ListMarkdown(root, "core/scaffolds")
+	files, err := core.ListMarkdown(root, project.Rel("scaffolds"))
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -211,7 +191,7 @@ func checkScaffoldAdded(root string) []string {
 		}
 		path := filepath.Join(root, filepath.FromSlash(logbook.RelPath("friction", m[1])))
 		if _, err := os.Stat(path); err != nil {
-			errs = append(errs, rel+": added link log/friction/"+m[1]+".md does not exist")
+			errs = append(errs, rel+": added link .ax/friction/"+m[1]+".md does not exist")
 		}
 	}
 	return errs

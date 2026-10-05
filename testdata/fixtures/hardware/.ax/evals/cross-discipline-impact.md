@@ -8,4 +8,4 @@ task: >
   so a hardware session can log a choice the same way software does.
 grader:
   kind: script
-  file: core/capabilities/record-decision.md
+  file: .ax/capabilities/record-decision.md

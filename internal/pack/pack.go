@@ -8,10 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/yamlx"
 )
 
-// Add copies a pack into packs/<id>/ and merges provided files into core/.
+// Add copies a pack into .ax/packs/<id>/ and merges provided files into .ax/.
 func Add(root, src string, out io.Writer) error {
 	abs, err := filepath.Abs(src)
 	if err != nil {
@@ -21,7 +22,7 @@ func Add(root, src string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	dest := filepath.Join(root, "packs", man.ID)
+	dest := project.Join(root, "packs", man.ID)
 	if err := os.RemoveAll(dest); err != nil {
 		return err
 	}
@@ -36,7 +37,7 @@ func Add(root, src string, out io.Writer) error {
 	if err := ensurePackListed(root, man.ID); err != nil {
 		return err
 	}
-	fmt.Fprintln(out, filepath.ToSlash(filepath.Join("packs", man.ID)))
+	fmt.Fprintln(out, project.Rel("packs", man.ID))
 	return nil
 }
 
@@ -53,9 +54,9 @@ func mergeKind(root, packDir, kind string) error {
 			continue
 		}
 		src := filepath.Join(packDir, filepath.FromSlash(rel))
-		dst := filepath.Join(root, filepath.FromSlash("core/"+rel))
+		dst := filepath.Join(root, filepath.FromSlash(project.Rel(rel)))
 		if fileExists(dst) {
-			return fmt.Errorf("refusing to overwrite core/%s", rel)
+			return fmt.Errorf("refusing to overwrite %s", project.Rel(rel))
 		}
 		if err := copyFile(src, dst); err != nil {
 			return err
@@ -65,7 +66,7 @@ func mergeKind(root, packDir, kind string) error {
 }
 
 func mergeChecks(root, packChecks string) error {
-	path := filepath.Join(root, "core", "checks.yaml")
+	path := project.Join(root, "checks.yaml")
 	existing, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -78,7 +79,7 @@ func mergeChecks(root, packChecks string) error {
 	var add []map[string]interface{}
 	if len(existing) > 0 {
 		if err := yamlx.Decode(existing, &have); err != nil {
-			return fmt.Errorf("core/checks.yaml: %w", err)
+			return fmt.Errorf("%s: %w", project.Rel("checks.yaml"), err)
 		}
 	}
 	if err := yamlx.Decode(incoming, &add); err != nil {
@@ -218,13 +219,13 @@ func Extract(root, dest, id string, files []string, replacements map[string]stri
 func kindFromRel(rel string) string {
 	rel = filepath.ToSlash(rel)
 	switch {
-	case strings.HasPrefix(rel, "core/capabilities/"):
+	case strings.HasPrefix(rel, project.Rel("capabilities")+"/"):
 		return "capabilities"
-	case strings.HasPrefix(rel, "core/evals/"):
+	case strings.HasPrefix(rel, project.Rel("evals")+"/"):
 		return "evals"
-	case strings.HasPrefix(rel, "core/scaffolds/"):
+	case strings.HasPrefix(rel, project.Rel("scaffolds")+"/"):
 		return "scaffolds"
-	case rel == "core/checks.yaml":
+	case rel == project.Rel("checks.yaml"):
 		return "checks"
 	default:
 		return ""
@@ -246,7 +247,7 @@ func Bootstrap(root, discipline string, out io.Writer) error {
 	if discipline == "" {
 		return fmt.Errorf("usage: ax pack bootstrap <discipline>")
 	}
-	dir := filepath.Join(root, "packs", discipline+"-starter")
+	dir := project.Join(root, "packs", discipline+"-starter")
 	if err := os.MkdirAll(filepath.Join(dir, "capabilities"), 0755); err != nil {
 		return err
 	}
@@ -273,7 +274,7 @@ func Bootstrap(root, discipline string, out io.Writer) error {
 
 Add process only after something fails. Empty files are intentional.
 
-1. Decide the toolchain for this discipline. Fill the decision skeleton under log/decisions.
+1. Decide the toolchain for this discipline. Fill the decision skeleton under .ax/decisions.
 2. Write a one-page intent fragment: what this discipline is for, and who it serves.
 3. Leave checks empty until a failure needs a machine-testable rule.
 4. Leave evals empty until a failure needs a scored task.
@@ -299,6 +300,6 @@ Pick the toolchain for this discipline.
 	if err := os.WriteFile(filepath.Join(dir, "toolchain-decision.md"), []byte(decision), 0644); err != nil {
 		return err
 	}
-	fmt.Fprintln(out, filepath.ToSlash(filepath.Join("packs", discipline+"-starter")))
+	fmt.Fprintln(out, project.Rel("packs", discipline+"-starter"))
 	return nil
 }

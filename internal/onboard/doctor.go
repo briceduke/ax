@@ -38,7 +38,7 @@ func Doctor(root string, opts DoctorOptions, out io.Writer) error {
 	if _, err := project.Load(root); err != nil {
 		return err
 	}
-	fmt.Fprintln(out, "ok   ax.yaml")
+	fmt.Fprintln(out, "ok   .ax/ax.yaml")
 	if err := checks.Run(root, checks.Options{Tier: checks.TierFull}, out); err != nil {
 		return err
 	}

@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/briceduke/ax/internal/project"
 )
 
 var (
@@ -42,14 +44,23 @@ func KindFromDir(dir string) (string, bool) {
 	}
 }
 
-// RelDir is log/<kind-dir> using slash separators.
+// RelDir is .ax/<kind-dir> using slash separators.
 func RelDir(kind string) string {
-	return "log/" + KindDir(kind)
+	return project.Rel(KindDir(kind))
 }
 
-// RelPath is log/<kind-dir>/<id>.md using slash separators.
+// RelPath is .ax/<kind-dir>/<id>.md using slash separators.
 func RelPath(kind, id string) string {
 	return RelDir(kind) + "/" + id + ".md"
+}
+
+// TitleFromID turns a date-slug id into a short title for root-file lists.
+func TitleFromID(id string) string {
+	parts := strings.Split(id, "-")
+	if len(parts) < 4 {
+		return strings.ReplaceAll(id, "-", " ")
+	}
+	return strings.ReplaceAll(strings.Join(parts[3:], "-"), "-", " ")
 }
 
 // ValidID reports whether id matches the date-slug pattern.

@@ -119,7 +119,7 @@ func build(root string, opts Options) (Payload, error) {
 	if change == "" {
 		change = "See friction notes. Propose the smallest core or machinery fix that removes the repeated pain."
 	}
-	evidence := "log/friction and log/observations in this repo"
+	evidence := ".ax/friction and .ax/observations in this repo"
 	if opts.Friction != "" {
 		evidence = logbook.RelPath("friction", opts.Friction)
 	}

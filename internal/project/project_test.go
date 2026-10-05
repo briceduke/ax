@@ -9,7 +9,10 @@ import (
 
 func TestFindWalksUp(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: []\npacks: []\n"), 0644); err != nil {
+	if err := os.MkdirAll(Join(root), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: []\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	nested := filepath.Join(root, "a", "b")
@@ -27,7 +30,10 @@ func TestFindWalksUp(t *testing.T) {
 
 func TestLoadRejectsUnknownFields(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: []\npacks: []\nextra: 1\n"), 0644); err != nil {
+	if err := os.MkdirAll(Join(root), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: []\npacks: []\nextra: 1\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	_, err := Load(root)
@@ -38,7 +44,10 @@ func TestLoadRejectsUnknownFields(t *testing.T) {
 
 func TestLoadRequiresVersion(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("targets: []\npacks: []\n"), 0644); err != nil {
+	if err := os.MkdirAll(Join(root), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(Join(root, "ax.yaml"), []byte("targets: []\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	_, err := Load(root)

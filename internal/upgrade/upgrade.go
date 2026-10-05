@@ -163,7 +163,7 @@ func readVersion(from string) (string, error) {
 
 func copyMachinery(from, root string) error {
 	for _, rel := range []string{"capabilities", "internal/builtins/capabilities"} {
-		if err := copyCaps(filepath.Join(from, filepath.FromSlash(rel)), filepath.Join(root, "core", "capabilities")); err != nil {
+		if err := copyCaps(filepath.Join(from, filepath.FromSlash(rel)), project.Join(root, "capabilities")); err != nil {
 			return err
 		}
 	}

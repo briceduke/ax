@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/yamlx"
 )
 
@@ -16,7 +17,7 @@ const (
 	MethodEval = "eval"
 )
 
-// Eval is one harness test under core/evals.
+// Eval is one harness test under .ax/evals.
 type Eval struct {
 	ID      string     `yaml:"id"`
 	Related []string   `yaml:"related"`
@@ -102,9 +103,9 @@ func validateEval(ev *Eval) error {
 	return nil
 }
 
-// LoadAll parses every eval under core/evals.
+// LoadAll parses every eval under .ax/evals.
 func LoadAll(root string) ([]*Eval, error) {
-	rels, err := core.ListMarkdown(root, "core/evals")
+	rels, err := core.ListMarkdown(root, project.Rel("evals"))
 	if err != nil {
 		return nil, err
 	}

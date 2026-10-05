@@ -43,10 +43,10 @@ func TestUpgradeFromFakeSource(t *testing.T) {
 	if !strings.Contains(text, "old pin: 0.1.0") || !strings.Contains(text, "new pin: 0.2.0") {
 		t.Fatalf("report = %s", text)
 	}
-	if _, err := os.Stat(filepath.Join(root, "core", "capabilities", "keep-files-short.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, ".ax", "capabilities", "keep-files-short.md")); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := os.ReadFile(filepath.Join(root, "ax.yaml"))
+	cfg, err := os.ReadFile(filepath.Join(root, ".ax", "ax.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestUpgradeFromFakeFetcherAndSubmit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upgrade: %v\n%s", err, buf.String())
 	}
-	if _, err := os.Stat(filepath.Join(root, "core", "capabilities", "keep-files-short.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, ".ax", "capabilities", "keep-files-short.md")); err != nil {
 		t.Fatal(err)
 	}
 	if len(ghArgs) < 2 || ghArgs[0] != "issue" {

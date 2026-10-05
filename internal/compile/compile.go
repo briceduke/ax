@@ -9,6 +9,7 @@ import (
 
 	"github.com/briceduke/ax/internal/builtins"
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/logbook"
 	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/version"
 	"github.com/briceduke/ax/targets"
@@ -45,12 +46,21 @@ type Snapshot struct {
 	Intent       string
 	Capabilities []*core.Capability
 	Scaffolds    []*core.Scaffold
+	Decisions    []*logbook.Decision
 	Tools        []core.Tool
 	Hash         string
 	Version      string
 }
 
 const fastCheckCommand = "ax check --tier fast"
+
+// Refresh compiles root files and mirrors notes when they are the work.
+func Refresh(root string) error {
+	if err := Run(root, Options{}, io.Discard); err != nil {
+		return err
+	}
+	return project.SyncRecord(root)
+}
 
 // Run compiles enabled targets (or --target) into adapter files.
 func Run(root string, opts Options, out io.Writer) error {
@@ -116,12 +126,12 @@ func selectTargets(enabled []string, only string) ([]string, error) {
 			return []string{only}, nil
 		}
 	}
-	return nil, fmt.Errorf("target %q is not enabled in ax.yaml", only)
+	return nil, fmt.Errorf("target %q is not enabled in .ax/ax.yaml", only)
 }
 
 func loadSnapshot(root, hash string) (*Snapshot, error) {
 	intent := ""
-	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash("core/intent.md")))
+	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(project.Rel("intent.md"))))
 	if err == nil {
 		intent = string(core.NormalizeLF(data))
 	} else if !os.IsNotExist(err) {
@@ -139,6 +149,10 @@ func loadSnapshot(root, hash string) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	decisions, err := logbook.LoadDecisions(root)
+	if err != nil {
+		return nil, err
+	}
 	tools, err := core.LoadTools(root)
 	if err != nil {
 		return nil, err
@@ -147,6 +161,7 @@ func loadSnapshot(root, hash string) (*Snapshot, error) {
 		Intent:       intent,
 		Capabilities: caps,
 		Scaffolds:    scaffolds,
+		Decisions:    logbook.InForce(decisions),
 		Tools:        tools,
 		Hash:         hash,
 		Version:      version.Version,
