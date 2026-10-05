@@ -122,7 +122,7 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 | `ax retro` | Propose cuts and fixes from logged friction | Built (no auto-merge) |
 | `ax pack …` | Copy or extract a shared discipline bundle | Built |
 | `ax propose-upstream` | Write a cleaned-up fix locally | Built (`--submit` files a gh issue, never merges) |
-| `ax upgrade` | Move the project to a new ax version | Built (git fetch or `--from`; `--submit` files an issue, never merges) |
+| `ax upgrade` | Update the project pin and replace this ax from GitHub Releases | Built (`--skip-binary` leaves the exe alone; `--submit` files an issue, never merges) |
 | `ax doctor` | Prove the repo’s files, PATH, and optional container are sane | Built |
 
 ## Build order
