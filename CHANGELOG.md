@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/briceduke/ax/compare/v0.5.0...v0.6.0) (2026-10-05)
+
+
+### Features
+
+* tell agents how to save a decision ([#14](https://github.com/briceduke/ax/issues/14)) ([d204ff5](https://github.com/briceduke/ax/commit/d204ff5119e11875a0a4c287d1dd6d0ca7471c5c))
+
 ## [0.5.0](https://github.com/briceduke/ax/compare/v0.4.1...v0.5.0) (2026-10-05)
 
 
