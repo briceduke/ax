@@ -36,6 +36,10 @@ func run(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("%s", usage())
 	}
+	if args[0] == "--help" || args[0] == "-h" {
+		fmt.Print(usage())
+		return nil
+	}
 	switch args[0] {
 	case "log":
 		return runLog(args[1:])
@@ -77,9 +81,7 @@ func usage() string {
 ax is a harness for agent-driven product development.
 
 Usage:
-  ax log friction <one-line>
-  ax log observation <finding> --method <how>
-  ax log decision <title> [--supersedes <id>]
+`+logCommands+`
   ax check [--tier fast|full|slow] [--all]
   ax compile [--target <name>] [--without <scaffold-id>]
   ax eval [--without <scaffold-id>] [--runs <n>]
@@ -97,6 +99,15 @@ Usage:
   ax doctor [--require-container]
   ax version
 `) + "\n"
+}
+
+const logCommands = `  ax log friction <one-line>
+  ax log observation <finding> --method <how>
+  ax log decision <title> [--supersedes <id>]
+      Markdown on stdin: ## Context, ## Options, ## Choice, ## Why. No pipe writes those headings empty.`
+
+func logUsage() string {
+	return "Usage:\n" + logCommands + "\n"
 }
 
 func loadRoot() (string, *project.Config, error) {
@@ -118,7 +129,11 @@ func loadRoot() (string, *project.Config, error) {
 
 func runLog(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: ax log friction|observation|decision ...")
+		return fmt.Errorf("%s", strings.TrimRight(logUsage(), "\n"))
+	}
+	if args[0] == "--help" || args[0] == "-h" {
+		fmt.Print(logUsage())
+		return nil
 	}
 	root, _, err := loadRoot()
 	if err != nil {
@@ -143,7 +158,7 @@ func runLog(args []string) error {
 		}
 		path, err = logbook.WriteDecision(root, strings.Join(pos, " "), flags["supersedes"], body, now)
 	default:
-		return fmt.Errorf("unknown log kind %q", kind)
+		return fmt.Errorf("unknown log kind %q\n%s", kind, strings.TrimRight(logUsage(), "\n"))
 	}
 	if err != nil {
 		return err

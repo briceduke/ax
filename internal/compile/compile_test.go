@@ -279,6 +279,9 @@ func TestBuiltinRecordDecisionLands(t *testing.T) {
 		if !bytes.Contains(data, []byte("own-the-harness")) {
 			t.Fatalf("%s missing own-the-harness:\n%s", rel, data)
 		}
+		if !bytes.Contains(data, []byte("markdown on stdin")) {
+			t.Fatalf("%s missing decision stdin contract:\n%s", rel, data)
+		}
 	}
 }
 
@@ -345,6 +348,9 @@ func assertAdapters(t *testing.T, root string) {
 		if rel == "AGENTS.md" || rel == "CLAUDE.md" {
 			if !bytes.Contains(data, []byte("own-the-harness")) {
 				t.Fatalf("%s missing own-the-harness:\n%s", rel, data)
+			}
+			if !bytes.Contains(data, []byte("markdown on stdin")) {
+				t.Fatalf("%s missing decision stdin contract:\n%s", rel, data)
 			}
 		}
 	}

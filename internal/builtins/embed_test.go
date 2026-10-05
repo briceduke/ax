@@ -21,10 +21,10 @@ func TestCapabilitiesIncludesHarnessNotes(t *testing.T) {
 		invocable   bool
 		mustContain string
 	}{
-		{id: "own-the-harness", invocable: false, mustContain: "Do not edit AGENTS.md"},
+		{id: "own-the-harness", invocable: false, mustContain: "markdown on stdin"},
 		{id: "log-friction", invocable: true, mustContain: "ax log friction"},
 		{id: "sync-harness", invocable: true, mustContain: "ax compile"},
-		{id: "record-decision", invocable: true, mustContain: "ax log decision"},
+		{id: "record-decision", invocable: true, mustContain: "pipe markdown on stdin"},
 	}
 	if len(caps) != len(want) {
 		t.Fatalf("got %d capabilities, want %d", len(caps), len(want))

@@ -82,6 +82,22 @@ func TestVersionPrintsConstWithoutRepo(t *testing.T) {
 	if !strings.Contains(usage(), "ax install") || !strings.Contains(usage(), "ax notes") {
 		t.Fatal("usage missing install/notes")
 	}
+	if !strings.Contains(usage(), "Markdown on stdin") {
+		t.Fatal("usage missing decision stdin contract")
+	}
+}
+
+func TestLogHelpPrintsDecisionStdin(t *testing.T) {
+	t.Chdir(t.TempDir())
+	stdout, stderr := capture(t, func() error {
+		return run([]string{"log", "--help"})
+	})
+	if stderr != "" {
+		t.Fatalf("stderr = %q", stderr)
+	}
+	if !strings.Contains(stdout, "Markdown on stdin: ## Context") {
+		t.Fatalf("stdout = %q", stdout)
+	}
 }
 
 func TestInstallWritesSkillsUnderHome(t *testing.T) {
