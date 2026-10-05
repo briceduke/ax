@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/briceduke/ax/compare/v0.2.0...v0.2.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* run CI once per PR and attach a raw ax.exe on Releases ([#4](https://github.com/briceduke/ax/issues/4)) ([bdf0545](https://github.com/briceduke/ax/commit/bdf054569a164ec2c15575efe7492c97768f233f))
+
 ## [0.2.0](https://github.com/briceduke/ax/compare/v0.1.0...v0.2.0) (2026-10-05)
 
 
