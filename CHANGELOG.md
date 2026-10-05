@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/briceduke/ax/compare/v0.2.1...v0.3.0) (2026-10-05)
+
+
+### Features
+
+* ax upgrade replaces the running binary from GitHub Releases ([#6](https://github.com/briceduke/ax/issues/6)) ([f358bf9](https://github.com/briceduke/ax/commit/f358bf92b90fbb1bfd4e20b50190d90dbad3b2f2))
+
+## [0.2.1](https://github.com/briceduke/ax/compare/v0.2.0...v0.2.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* run CI once per PR and attach a raw ax.exe on Releases ([#4](https://github.com/briceduke/ax/issues/4)) ([bdf0545](https://github.com/briceduke/ax/commit/bdf054569a164ec2c15575efe7492c97768f233f))
+
 ## [0.2.0](https://github.com/briceduke/ax/compare/v0.1.0...v0.2.0) (2026-10-05)
 
 

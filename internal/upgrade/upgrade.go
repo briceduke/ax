@@ -12,7 +12,6 @@ import (
 	"github.com/briceduke/ax/internal/compile"
 	"github.com/briceduke/ax/internal/project"
 	"github.com/briceduke/ax/internal/upstream"
-	"github.com/briceduke/ax/internal/version"
 )
 
 const defaultRemote = "https://github.com/briceduke/ax.git"
@@ -25,11 +24,14 @@ type Commander func(args ...string) (string, error)
 
 // Options control where machinery is copied from and optional issue filing.
 type Options struct {
-	From    string
-	Submit  bool
-	Now     time.Time
-	Fetcher Fetcher
-	Command Commander
+	From       string
+	Submit     bool
+	Now        time.Time
+	Fetcher    Fetcher
+	Command    Commander
+	Get        Getter
+	CurrentExe string
+	SkipBinary bool
 }
 
 // GitFetch clones remote with git. Tests inject run instead of calling git.
@@ -101,6 +103,10 @@ func Run(root string, opts Options, out io.Writer) error {
 	if checkErr != nil {
 		checkStatus = "FAIL"
 	}
+	binNote, binErr := installBinary(opts, newPin)
+	if binErr != nil {
+		return binErr
+	}
 	report := fmt.Sprintf(`# Upgrade report
 
 date: %s
@@ -113,7 +119,7 @@ compile:
 check: %s
 %s
 A person still approves. Nothing was merged remotely.
-`, opts.Now.Format("2006-01-02"), old, newPin, version.Version, note, indent(compileBuf.String()), checkStatus, indent(checkBuf.String()))
+`, opts.Now.Format("2006-01-02"), old, newPin, binNote, note, indent(compileBuf.String()), checkStatus, indent(checkBuf.String()))
 	path := filepath.Join(root, ".ax", "upgrade", "report.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err

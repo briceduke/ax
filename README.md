@@ -18,19 +18,21 @@ You still approve every change. ax does not merge GitHub PRs for you. It only ta
 
 ## Install
 
-Download the binary for your OS from the [latest GitHub Release](https://github.com/briceduke/ax/releases/latest). On Windows that is `ax_*_windows_amd64.exe`. Put it on your PATH as `ax`. Open a new terminal and run `ax version`. You should see the same version string as that release.
+On a normal Windows PC, open [the latest Release](https://github.com/briceduke/ax/releases/latest), download `ax_*_windows_amd64.exe` (or the `.zip` and unzip it), and put it on your PATH so the command is `ax`. Open a new terminal and run `ax version`. You should see the same version string as that release.
+
+ARM laptop: `windows_arm64`. Mac: `darwin_arm64` or `darwin_amd64`. Linux: `linux_amd64` or `linux_arm64`.
 
 After that, `ax upgrade` replaces the binary. Outside a product repo it only replaces the binary. Inside one, it also updates the project pin.
 
 `go build -o ax.exe ./cmd/ax` is only for changing ax itself, in this repo.
 
-After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits. Releases also ship Linux and macOS binaries.
+After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits.
 
 ## Releases
 
 A conventional `feat` or `fix` merged to `main` releases itself. No click for the normal path. Commits must start with `feat`, `fix`, or `docs` (`feat!:` or a `BREAKING CHANGE:` footer for breaking). `docs` does not bump. `feat` is minor. `fix` is patch. On 0.x, breaking is minor; 1.0 is a later, conscious choice. Agents must use those prefixes — do not use `chore` for user-facing work.
 
-release-please opens a version PR that bumps `VERSION` and `internal/version/version.go` together. After CI is green, a workflow squash-merges only that PR, tags `v*`, and GoReleaser attaches the binaries. `ax upgrade` still clones this git repo and reads `VERSION`; it does not read Release zips.
+release-please opens a version PR that bumps `VERSION` and `internal/version/version.go` together. After CI is green, a workflow squash-merges only that PR, tags `v*`, and GoReleaser attaches zip/tar files plus a raw `ax` / `ax.exe` for each OS. `ax upgrade` clones git for the project pin and downloads the matching Release to replace the running `ax`. `--skip-binary` leaves the executable alone.
 
 ## Start a new project
 
@@ -259,7 +261,7 @@ Built in:
 
 `ax propose-upstream` writes a cleaned issue and pull-request draft under `.ax/upstream/`. Absolute paths and anything listed in `.ax/private.txt` are stripped. It does not open GitHub unless you pass `--submit` and `gh` is on PATH. Even then it only files an issue. You still approve the change.
 
-`ax upgrade` without `--from` clones the ax GitHub repo (injectable in tests) and reads `VERSION`. It does not use GitHub Release zips. `--from <dir>` still uses a local tree. It copies any new how-we-work notes, bumps the pin in `ax.yaml`, recompiles, runs checks, and writes `.ax/upgrade/report.md`. `--submit` files a GitHub issue if `gh` exists. There is no auto-merge.
+`ax upgrade` without `--from` clones the ax GitHub repo, bumps the project pin, and downloads the matching GitHub Release to replace the `ax` on your PATH. Outside a product repo it only replaces the binary. `--skip-binary` leaves the executable alone. `--from <dir>` still uses a local tree for notes. `--submit` files a GitHub issue if `gh` exists. There is no auto-merge.
 
 ## Log size
 
@@ -277,7 +279,7 @@ ax eval [--without scaffold-id] [--runs n]
 ax retro
 ax ablate
 ax propose-upstream [--friction id] [--layer machinery|schema|target|pack] [--change text] [--helps-others] [--submit]
-ax upgrade [--from dir] [--submit]
+ax upgrade [--from dir] [--submit] [--skip-binary]
 ax pack add <dir>
 ax pack extract <dir> --id <id> [--file path] [--replace old=PARAM]
 ax pack bootstrap <discipline>

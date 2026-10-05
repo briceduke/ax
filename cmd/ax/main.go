@@ -81,7 +81,7 @@ Usage:
   ax retro
   ax ablate
   ax propose-upstream [--friction <id>] [--layer machinery|schema|target|pack] [--change <text>] [--helps-others] [--submit]
-  ax upgrade [--from <dir>] [--submit]
+  ax upgrade [--from <dir>] [--submit] [--skip-binary]
   ax pack add <dir>
   ax pack extract <dir> --id <id> [--file <path>] [--replace old=PARAM]
   ax pack bootstrap <discipline>
@@ -276,25 +276,34 @@ func runUpgrade(args []string) error {
 	fs := newFlagSet("upgrade")
 	from := fs.String("from", "", "local machinery directory with a VERSION file")
 	submit := fs.Bool("submit", false, "file a GitHub issue with gh (does not merge)")
+	skipBinary := fs.Bool("skip-binary", false, "do not replace this ax executable")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	root, _, err := loadRoot()
-	if err != nil {
-		return err
+	opts := upgrade.Options{From: *from, Submit: *submit, SkipBinary: *skipBinary}
+	if !*skipBinary {
+		opts.Get = upgrade.DefaultGet
 	}
-	opts := upgrade.Options{From: *from, Submit: *submit}
 	if *from == "" {
-		if _, err := exec.LookPath("git"); err != nil {
-			return fmt.Errorf("upgrade needs --from <dir> (git not on PATH)")
+		if _, err := exec.LookPath("git"); err == nil {
+			opts.Fetcher = upgrade.GitFetch("", agent.SystemRun)
 		}
-		opts.Fetcher = upgrade.GitFetch("", agent.SystemRun)
 	}
 	if *submit {
 		if _, err := exec.LookPath("gh"); err != nil {
 			return fmt.Errorf("--submit requires gh on PATH")
 		}
 		opts.Command = ghCommand
+	}
+	root, _, err := loadRoot()
+	if err != nil {
+		if *skipBinary {
+			return err
+		}
+		return upgrade.Self(opts, os.Stdout)
+	}
+	if *from == "" && opts.Fetcher == nil {
+		return fmt.Errorf("upgrade needs --from <dir> (git not on PATH)")
 	}
 	return upgrade.Run(root, opts, os.Stdout)
 }

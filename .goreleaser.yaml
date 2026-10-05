@@ -18,10 +18,14 @@ builds:
       - arm64
 
 archives:
-  - formats: [tar.gz]
+  - id: packed
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
         formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: binary
+    formats: [binary]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 changelog:
