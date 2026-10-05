@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/briceduke/ax/compare/v0.4.1...v0.5.0) (2026-10-05)
+
+
+### Features
+
+* keep project context in .ax and refresh the root files on save ([#12](https://github.com/briceduke/ax/issues/12)) ([d2d17d8](https://github.com/briceduke/ax/commit/d2d17d81ad974bc705a8683edf54a1574eabff68))
+
 ## [0.4.1](https://github.com/briceduke/ax/compare/v0.4.0...v0.4.1) (2026-10-05)
 
 
