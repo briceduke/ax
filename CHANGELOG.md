@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/briceduke/ax/compare/v0.3.0...v0.4.0) (2026-10-05)
+
+
+### Features
+
+* let the agent own ax log, compile, and check ([#8](https://github.com/briceduke/ax/issues/8)) ([b29f776](https://github.com/briceduke/ax/commit/b29f7768b16a8665b9801a5128a8189ca4e7e431))
+
 ## [0.3.0](https://github.com/briceduke/ax/compare/v0.2.1...v0.3.0) (2026-10-05)
 
 
