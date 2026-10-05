@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/briceduke/ax/compare/v0.4.0...v0.4.1) (2026-10-05)
+
+
+### Documentation
+
+* keep the software week story in chat ([#10](https://github.com/briceduke/ax/issues/10)) ([2ced6ed](https://github.com/briceduke/ax/commit/2ced6eddb0800d96a24f3f32055d3135588da00b))
+
 ## [0.4.0](https://github.com/briceduke/ax/compare/v0.3.0...v0.4.0) (2026-10-05)
 
 

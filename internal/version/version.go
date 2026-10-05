@@ -1,4 +1,4 @@
 package version
 
 // Version is the phase 1 binary version. Projects pin this in ax.yaml.
-const Version = "0.4.0" // x-release-please-version
+const Version = "0.4.1" // x-release-please-version
