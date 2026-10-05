@@ -109,13 +109,9 @@ That is the whole process pile on day one: intent, four built-in how-we-work not
 
 You still have no parser. You need a runtime. The pack (or the bootstrap starter) asked you to write this down, not to pretend it is obvious.
 
-In Cursor, say that you want bun and TypeScript. The agent records that choice. You can type `/record-decision` if you want that skill immediately. Or, in the terminal:
+In Cursor, say that you want bun and TypeScript. The agent records that choice. You can type `/record-decision` if you want that skill immediately.
 
-```powershell
-ax log decision "use bun and TypeScript"
-```
-
-It prints a path like `log/decisions/2026-10-04-use-bun-and-typescript.md`. The agent fills the four sections. Do not leave them blank.
+The agent writes `log/decisions/2026-10-04-use-bun-and-typescript.md` and fills the four sections. Do not leave them blank.
 
 ```markdown
 ## Context
@@ -151,26 +147,17 @@ You want Chase checking CSVs to parse. In Cursor:
 
 The agent writes a parser. It adds `lodash` to split a line on commas. You did not ask.
 
-The agent logs the hurt. One line. That is the whole file.
-
-```powershell
-ax log friction "the agent added lodash to split CSV columns"
-```
+The agent logs the hurt. One line. That is the whole file: `the agent added lodash to split CSV columns`.
 
 Then, in chat:
 
 > Take lodash out. Split the CSV in this repo. Do not add packages.
 
-You do not want this again. You also do not want a merge that was never tested. Two real choices. Say that in chat. The agent records both, or you type `/record-decision` twice. The commands are:
-
-```powershell
-ax log decision "no extra npm packages without asking"
-ax log decision "tests must pass before merge"
-```
+You do not want this again. You also do not want a merge that was never tested. Say those two rules in chat. The agent records both. You can type `/record-decision` if you want that skill immediately.
 
 The agent fills Context, Options, Choice, Why on each. For the first: keep the built-in CSV tools, or add a package only after a person says yes. For the second: a report that was never run against a known file is not done.
 
-A rule a machine can test should not stay a paragraph. In the same change, add checks to `core/checks.yaml` (the list of commands that must stay true). Point `enforces:` at the decision each check is keeping honest. When a check fails, ax prints that decision’s Why.
+A rule a machine can test should not stay a paragraph. In the same change, the agent adds checks to `core/checks.yaml` (the list of commands that must stay true). Point `enforces:` at the decision each check is keeping honest. When a check fails, ax prints that decision’s Why.
 
 ```yaml
 - id: unit-tests
@@ -187,9 +174,9 @@ A rule a machine can test should not stay a paragraph. In the same change, add c
 
 `run` is a program and its arguments. No pipes or `&&`. `full` is the default for `ax check`. `fast` also runs after every edit, once the hooks exist.
 
-You write a tiny `checks/allowed-packages.ts` that fails if `package.json` lists a name you did not allow. You add one fixture CSV and a test that checks the September totals.
+The agent writes a tiny `checks/allowed-packages.ts` that fails if `package.json` lists a name you did not allow, plus one fixture CSV and a test that checks the September totals.
 
-You can also add a how-we-work note so the agent sees the rule before it types. One file in `core/capabilities/`:
+You can also have the agent add a how-we-work note so it sees the rule before it types. One file in `core/capabilities/`:
 
 ```markdown
 ---
@@ -205,7 +192,7 @@ No `hints` line. ax copies this into `AGENTS.md` and `CLAUDE.md`. The agent is s
 
 Then the agent runs `ax compile` and `ax check`.
 
-If `bun test` fails, ax fails, and it points at “tests must pass before merge.” You fix the test, not the generated files.
+If `bun test` fails, ax fails, and it points at “tests must pass before merge.” Fix the test in chat, not the generated files.
 
 Wednesday night, spend has two extra rules. Both came from a failure you watched. Nothing else was added “in case.”
 
@@ -228,15 +215,11 @@ If you want a skill you can type, add `hints: [user-invocable]` to a how-we-work
 
 ## 5. Thursday: friction becomes a scored task
 
-Thursday you ask for a “other” category for unmapped merchants. The agent adds `date-fns` to parse the posted date. Same class of failure. The agent logs it.
+Thursday you ask for a “other” category for unmapped merchants. The agent adds `date-fns` to parse the posted date. Same class of failure. The agent logs it: `the agent added date-fns to parse CSV dates`.
 
-```powershell
-ax log friction "the agent added date-fns to parse CSV dates"
-```
+In chat, take the package out. The check already fails if it stays. That is not enough: you want to know whether the *instruction* still works when a new model shows up.
 
-Take the package out. The check already fails if it stays. That is not enough: you want to know whether the *instruction* still works when a new model shows up.
-
-Write a short scored task in `core/evals/` (the folder for tests of whether an agent still follows a rule):
+Ask the agent to add a short scored task in `core/evals/` (the folder for tests of whether an agent still follows a rule):
 
 ```markdown
 ---
@@ -254,11 +237,7 @@ grader:
 
 Ask in chat for `ax eval`. It runs the task, scores it, and writes a dated fact under `log/observations/` (the folder for measurements and how you got them). Something like `eval no-unasked-deps 2/3`. Two out of three still sneaks a package in. The check would have caught the merge. The how-we-work note is not wasted yet.
 
-When something is a fact about the product, not a choice and not a score:
-
-```powershell
-ax log observation "September Chase export totals 1842.17" --method "compared CLI output to the bank website"
-```
+When something is a fact about the product, not a choice and not a score, say it in chat. The agent logs an observation. Example: September Chase export totals 1842.17, compared to the bank website.
 
 ## 6. Weekend: retro
 
@@ -285,11 +264,11 @@ It prints a path like `.ax/retro/2026-10-11-proposal.md`. That is a proposal, no
 - Delete the shortest always-on how-we-work note that duplicates a check.
 ```
 
-Every retro tries to delete something. This one points at `ask-before-deps`: you already have `allowed-packages`. You look at the 2/3 score and keep the note. Next retro can try again. If the score had been 3/3, you would delete the note, compile, and check. The check stays. The paragraph does not get to live forever.
+Every retro tries to delete something. This one points at `ask-before-deps`: you already have `allowed-packages`. You look at the 2/3 score and keep the note. Next retro can try again. If the score had been 3/3, tell the agent to delete the note. It compiles and checks. The check stays. The paragraph does not get to live forever.
 
-You apply what you accept by hand. Then the agent compiles and checks.
+You apply what you accept. Then the agent compiles and checks.
 
-That is the week. Start empty. Answer a few questions. Take a pack or bootstrap. Say the task. The agent logs friction, writes decisions, compiles, and checks. You approve the diff. When it hurts twice, add a scored task. Ask for a retro when you want a cut. Do not edit an old decision. Write a new one. If it replaces an old one, pass `--supersedes` and the old id.
+That is the week. Start empty. Answer a few questions. Take a pack or bootstrap. Say the task. The agent logs friction, writes decisions, compiles, and checks. You approve the diff. When it hurts twice, ask for a scored task. Ask for a retro when you want a cut. Do not edit an old decision. The agent writes a new one. If it replaces an old one, the new file names the old id.
 
 ## 7. What the human actually types
 
