@@ -8,12 +8,18 @@ import (
 	"github.com/briceduke/ax/internal/logbook"
 )
 
+// Runner executes an eval task in the project directory. Tests inject a fake.
+type Runner interface {
+	Run(dir, task string) (string, error)
+}
+
 // Options control which evals run and where scores are logged.
 type Options struct {
 	Without  string
 	Runs     int
 	Now      time.Time
 	Grader   Grader
+	Runner   Runner
 	RunCheck CheckRunner
 	LogRoot  string
 	SkipLog  bool
@@ -45,6 +51,9 @@ func Run(root string, opts Options, out io.Writer) ([]Result, error) {
 		fmt.Fprintf(out, "%-4s %s %s\n", status(res), ev.ID, res.Score())
 		if !opts.SkipLog {
 			finding := fmt.Sprintf("eval %s %s", ev.ID, res.Score())
+			if res.Skipped {
+				finding = fmt.Sprintf("eval %s skipped: %s", ev.ID, res.Detail)
+			}
 			if _, err := logbook.WriteObservation(logRoot, finding, MethodEval, opts.Now); err != nil {
 				return results, err
 			}
@@ -59,6 +68,15 @@ func runOne(root string, ev *Eval, opts Options) (Result, error) {
 	if opts.Runs > 0 {
 		runs = opts.Runs
 	}
+	if ev.Grader.Kind == KindRubric && opts.Runner == nil && opts.Grader == nil {
+		return Result{
+			ID:      ev.ID,
+			Passed:  0,
+			Runs:    runs,
+			Skipped: true,
+			Detail:  "no agent CLI (agent / cursor agent / claude) available",
+		}, nil
+	}
 	grader := opts.Grader
 	if grader == nil {
 		g, err := defaultGrader(ev.Grader.Kind, opts.RunCheck)
@@ -70,6 +88,12 @@ func runOne(root string, ev *Eval, opts Options) (Result, error) {
 	passed := 0
 	detail := ""
 	for i := 0; i < runs; i++ {
+		if opts.Runner != nil {
+			if _, err := opts.Runner.Run(root, ev.Task); err != nil {
+				detail = err.Error()
+				continue
+			}
+		}
 		if err := grader.Grade(root, ev); err != nil {
 			detail = err.Error()
 			continue
@@ -80,6 +104,9 @@ func runOne(root string, ev *Eval, opts Options) (Result, error) {
 }
 
 func status(res Result) string {
+	if res.Skipped {
+		return "skip"
+	}
 	if res.Passed == res.Runs {
 		return "ok"
 	}

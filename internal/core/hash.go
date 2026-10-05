@@ -100,7 +100,7 @@ func CompileHash(root string, extra map[string][]byte, without []string) (string
 
 func coreFiles(root string, without []string) ([]string, error) {
 	var files []string
-	for _, p := range []string{"core/intent.md", "core/checks.yaml"} {
+	for _, p := range []string{"core/intent.md", "core/checks.yaml", ToolsFile} {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(p))); err == nil {
 			files = append(files, p)
 		}

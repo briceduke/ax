@@ -35,7 +35,7 @@ func (Assembler) Write(spec *targets.Spec, snap *Snapshot) ([]File, error) {
 		return nil, err
 	}
 	files = append(files, hooks)
-	files = append(files, mcpFile(spec))
+	files = append(files, mcpFile(spec, snap.Tools))
 	return files, nil
 }
 
@@ -104,14 +104,23 @@ func hooksFile(spec *targets.Spec) (File, error) {
 	return File{Rel: spec.Hooks, Data: data}, nil
 }
 
-func mcpFile(spec *targets.Spec) File {
+func mcpFile(spec *targets.Spec, tools []core.Tool) File {
+	servers := map[string]mcpServer{}
+	for _, t := range tools {
+		servers[t.Name] = mcpServer{Command: t.Command, Args: t.Args}
+	}
 	data, err := json.MarshalIndent(struct {
-		MCPServers map[string]struct{} `json:"mcpServers"`
-	}{MCPServers: map[string]struct{}{}}, "", "  ")
+		MCPServers map[string]mcpServer `json:"mcpServers"`
+	}{MCPServers: servers}, "", "  ")
 	if err != nil {
 		data = []byte("{\"mcpServers\":{}}")
 	}
 	return File{Rel: spec.MCP, Data: data}
+}
+
+type mcpServer struct {
+	Command string   `json:"command"`
+	Args    []string `json:"args,omitempty"`
 }
 
 type claudeSettings struct {

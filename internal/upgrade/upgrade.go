@@ -11,16 +11,49 @@ import (
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/compile"
 	"github.com/briceduke/ax/internal/project"
+	"github.com/briceduke/ax/internal/upstream"
 	"github.com/briceduke/ax/internal/version"
 )
 
-// Options control where machinery is copied from.
+const defaultRemote = "https://github.com/briceduke/ax.git"
+
+// Fetcher copies ax machinery into a directory that has a VERSION file.
+type Fetcher func() (dir string, err error)
+
+// Commander runs an external program. Tests inject a fake.
+type Commander func(args ...string) (string, error)
+
+// Options control where machinery is copied from and optional issue filing.
 type Options struct {
-	From string
-	Now  time.Time
+	From    string
+	Submit  bool
+	Now     time.Time
+	Fetcher Fetcher
+	Command Commander
 }
 
-// Run bumps the pin when --from is set, recompiles, runs checks, and writes a local report.
+// GitFetch clones remote with git. Tests inject run instead of calling git.
+func GitFetch(remote string, run func(dir, name string, args ...string) (string, error)) Fetcher {
+	if remote == "" {
+		remote = defaultRemote
+	}
+	return func() (string, error) {
+		dest, err := os.MkdirTemp("", "ax-upgrade-")
+		if err != nil {
+			return "", err
+		}
+		if err := os.RemoveAll(dest); err != nil {
+			return "", err
+		}
+		if _, err := run("", "git", "clone", "--depth", "1", remote, dest); err != nil {
+			return "", fmt.Errorf("git fetch %s: %w", remote, err)
+		}
+		return dest, nil
+	}
+}
+
+// Run bumps the pin, recompiles, runs checks, and writes a local report.
+// Nothing is merged remotely. --submit may file a GitHub issue via gh.
 func Run(root string, opts Options, out io.Writer) error {
 	if opts.Now.IsZero() {
 		opts.Now = time.Now()
@@ -30,22 +63,33 @@ func Run(root string, opts Options, out io.Writer) error {
 		return err
 	}
 	old := cfg.Ax
-	note := "fetch is not implemented; this binary is " + version.Version + "."
-	newPin := old
-	if opts.From != "" {
-		pin, err := readVersion(opts.From)
+	from := opts.From
+	note := ""
+	if from == "" {
+		if opts.Fetcher == nil {
+			return fmt.Errorf("upgrade needs --from <dir> or a git fetcher")
+		}
+		dir, err := opts.Fetcher()
 		if err != nil {
 			return err
 		}
-		newPin = pin
-		if err := copyMachinery(opts.From, root); err != nil {
-			return err
-		}
-		note = "copied machinery from " + opts.From
-		cfg.Ax = newPin
-		if err := project.Save(root, cfg); err != nil {
-			return err
-		}
+		from = dir
+		note = "fetched machinery from git"
+	}
+	pin, err := readVersion(from)
+	if err != nil {
+		return err
+	}
+	newPin := pin
+	if err := copyMachinery(from, root); err != nil {
+		return err
+	}
+	if note == "" {
+		note = "copied machinery from " + from
+	}
+	cfg.Ax = newPin
+	if err := project.Save(root, cfg); err != nil {
+		return err
 	}
 	var compileBuf strings.Builder
 	if err := compile.Run(root, compile.Options{}, &compileBuf); err != nil {
@@ -78,6 +122,19 @@ A person still approves. Nothing was merged remotely.
 		return err
 	}
 	fmt.Fprintln(out, ".ax/upgrade/report.md")
+	if opts.Submit {
+		if opts.Command == nil {
+			return fmt.Errorf("--submit requires gh on PATH (local report was written)")
+		}
+		url, err := upstream.GHIssue(upstream.Commander(opts.Command), "").Submit("ax upgrade to "+newPin, report)
+		if err != nil {
+			if checkErr != nil {
+				return checkErr
+			}
+			return err
+		}
+		fmt.Fprintln(out, url)
+	}
 	return checkErr
 }
 
@@ -99,7 +156,15 @@ func readVersion(from string) (string, error) {
 }
 
 func copyMachinery(from, root string) error {
-	src := filepath.Join(from, "capabilities")
+	for _, rel := range []string{"capabilities", "internal/builtins/capabilities"} {
+		if err := copyCaps(filepath.Join(from, filepath.FromSlash(rel)), filepath.Join(root, "core", "capabilities")); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyCaps(src, dest string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -107,7 +172,6 @@ func copyMachinery(from, root string) error {
 		}
 		return err
 	}
-	dest := filepath.Join(root, "core", "capabilities")
 	if err := os.MkdirAll(dest, 0755); err != nil {
 		return err
 	}

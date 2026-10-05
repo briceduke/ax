@@ -2,7 +2,9 @@ package onboard
 
 import (
 	"bytes"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -85,10 +87,114 @@ func TestDoctorPATH(t *testing.T) {
 	}
 	t.Setenv("PATH", bindir)
 	buf.Reset()
-	if err := Doctor(root, &buf); err != nil {
+	if err := Doctor(root, DoctorOptions{
+		LookPath: func(file string) (string, error) {
+			if file == "docker" {
+				return "", fmt.Errorf("missing")
+			}
+			return exec.LookPath(file)
+		},
+	}, &buf); err != nil {
 		t.Fatalf("doctor: %v\n%s", err, buf.String())
 	}
 	if !strings.Contains(buf.String(), "ok   PATH ax") {
+		t.Fatalf("output = %q", buf.String())
+	}
+	if !strings.Contains(buf.String(), "container not verified") {
+		t.Fatalf("output = %q", buf.String())
+	}
+}
+
+func TestInitInterviewWritesIntentAndDecisions(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	stdin := strings.NewReader("field teams\nsoftware\nbattery life\ntwo people\nlow\n")
+	var buf bytes.Buffer
+	err := Init(root, InitOptions{
+		Name:      "widget",
+		Intent:    "A small recorder for field notes.",
+		Targets:   "cursor,claude-code",
+		Interview: true,
+		Stdin:     stdin,
+		Now:       now,
+	}, &buf)
+	if err != nil {
+		t.Fatalf("init: %v\n%s", err, buf.String())
+	}
+	intent, err := os.ReadFile(filepath.Join(root, "core", "intent.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(intent)
+	for _, want := range []string{"field teams", "software", "battery life", "two people", "low"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("intent missing %q:\n%s", want, text)
+		}
+	}
+	for _, name := range []string{
+		"2026-10-04-choose-the-product-toolchain.md",
+		"2026-10-04-set-process-weight.md",
+	} {
+		if _, err := os.Stat(filepath.Join(root, "log", "decisions", name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "Dockerfile")); err != nil {
+		t.Fatal(err)
+	}
+	buf.Reset()
+	if err := checks.Run(root, checks.Options{Tier: checks.TierFull, All: true}, &buf); err != nil {
+		t.Fatalf("check after interview: %v\n%s", err, buf.String())
+	}
+}
+
+func TestDoctorRequireContainerFailsWithoutDocker(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	var buf bytes.Buffer
+	if err := Init(root, InitOptions{Name: "d", Intent: "doctor fixture", Targets: "cursor,claude-code", Now: now}, &buf); err != nil {
+		t.Fatalf("init: %v\n%s", err, buf.String())
+	}
+	buf.Reset()
+	err := Doctor(root, DoctorOptions{
+		RequireContainer: true,
+		LookPath: func(file string) (string, error) {
+			if file == "ax" {
+				return "/bin/ax", nil
+			}
+			return "", fmt.Errorf("missing")
+		},
+	}, &buf)
+	if err == nil || !strings.Contains(err.Error(), "container not verified") {
+		t.Fatalf("error = %v out=%q", err, buf.String())
+	}
+}
+
+func TestDoctorContainerUsesFakeDocker(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	var buf bytes.Buffer
+	if err := Init(root, InitOptions{Name: "d", Intent: "doctor fixture", Targets: "cursor,claude-code", Now: now}, &buf); err != nil {
+		t.Fatalf("init: %v\n%s", err, buf.String())
+	}
+	var cmds []string
+	buf.Reset()
+	err := Doctor(root, DoctorOptions{
+		LookPath: func(file string) (string, error) {
+			return "/bin/" + file, nil
+		},
+		Run: func(dir, name string, args ...string) (string, error) {
+			cmds = append(cmds, name+" "+strings.Join(args, " "))
+			return "", nil
+		},
+	}, &buf)
+	if err != nil {
+		t.Fatalf("doctor: %v\n%s", err, buf.String())
+	}
+	if len(cmds) < 2 || !strings.Contains(cmds[0], "docker build") || !strings.Contains(cmds[1], "docker run") {
+		t.Fatalf("cmds = %#v", cmds)
+	}
+	if !strings.Contains(buf.String(), "ok   container") {
 		t.Fatalf("output = %q", buf.String())
 	}
 }

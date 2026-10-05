@@ -17,14 +17,20 @@ import (
 	"github.com/briceduke/ax/internal/version"
 )
 
-// InitOptions control non-interactive project creation.
+// InitOptions control project creation. Flags fill name/intent/targets for tests.
 type InitOptions struct {
-	Name    string
-	Intent  string
-	Targets string
-	Now     time.Time
-	Stdin   io.Reader
-	IsTTY   bool
+	Name          string
+	Intent        string
+	Targets       string
+	ForWhom       string
+	Disciplines   string
+	Constraints   string
+	Team          string
+	ProcessWeight string
+	Interview     bool
+	Now           time.Time
+	Stdin         io.Reader
+	IsTTY         bool
 }
 
 var treeDirs = []string{
@@ -35,6 +41,13 @@ var treeDirs = []string{
 	"log/observations",
 	"log/friction",
 }
+
+const productDockerfile = `FROM debian:bookworm-slim
+WORKDIR /work
+COPY . .
+# ax doctor bind-mounts the host ax binary at /usr/local/bin/ax
+CMD ["ax", "check"]
+`
 
 // Init writes the minimum project tree, the first decision, and compiles.
 func Init(root string, opts InitOptions, out io.Writer) error {
@@ -64,7 +77,10 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 	if err := os.WriteFile(filepath.Join(root, ".gitignore"), ignore, 0644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte(intentDoc(opts.Name, opts.Intent)), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "Dockerfile"), []byte(productDockerfile), 0644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte(intentDoc(opts)), 0644); err != nil {
 		return err
 	}
 	cap, err := builtins.RecordDecision()
@@ -77,6 +93,14 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 	rel, err := logbook.WriteDecision(root, "adopt ax for harness management", "", adoptBody(), opts.Now)
 	if err != nil {
 		return err
+	}
+	if opts.Interview || opts.IsTTY {
+		if _, err := logbook.WriteDecision(root, "choose the product toolchain", "", toolchainBody(opts), opts.Now); err != nil {
+			return err
+		}
+		if _, err := logbook.WriteDecision(root, "set process weight", "", processBody(opts), opts.Now); err != nil {
+			return err
+		}
 	}
 	checksYAML, err := builtins.ChecksYAML(rel)
 	if err != nil {
@@ -93,44 +117,58 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 }
 
 func fillInit(opts *InitOptions) error {
-	if opts.Name != "" && opts.Intent != "" {
-		if opts.Targets == "" {
-			opts.Targets = "cursor,claude-code"
-		}
-		return nil
+	if opts.Targets == "" {
+		opts.Targets = "cursor,claude-code"
 	}
-	if !opts.IsTTY {
+	interactive := opts.Interview || opts.IsTTY
+	if !interactive {
 		if opts.Name == "" || opts.Intent == "" {
 			return fmt.Errorf("ax init requires --name and --intent when stdin is not a terminal")
 		}
+		return nil
 	}
 	in := opts.Stdin
 	if in == nil {
 		in = os.Stdin
 	}
 	r := bufio.NewReader(in)
-	if opts.Name == "" {
-		fmt.Fprint(os.Stderr, "Project name: ")
-		line, err := r.ReadString('\n')
-		if err != nil && err != io.EOF {
-			return err
-		}
-		opts.Name = strings.TrimSpace(line)
+	if err := prompt(r, "Project name: ", &opts.Name); err != nil {
+		return err
 	}
-	if opts.Intent == "" {
-		fmt.Fprint(os.Stderr, "What are you building? ")
-		line, err := r.ReadString('\n')
-		if err != nil && err != io.EOF {
-			return err
-		}
-		opts.Intent = strings.TrimSpace(line)
+	if err := prompt(r, "What are you building? ", &opts.Intent); err != nil {
+		return err
 	}
-	if opts.Targets == "" {
-		opts.Targets = "cursor,claude-code"
+	if err := prompt(r, "For whom? ", &opts.ForWhom); err != nil {
+		return err
+	}
+	if err := prompt(r, "Disciplines (software, hardware, ...)? ", &opts.Disciplines); err != nil {
+		return err
+	}
+	if err := prompt(r, "Constraints? ", &opts.Constraints); err != nil {
+		return err
+	}
+	if err := prompt(r, "Who is on the team? ", &opts.Team); err != nil {
+		return err
+	}
+	if err := prompt(r, "Process weight (low/medium/high)? ", &opts.ProcessWeight); err != nil {
+		return err
 	}
 	if opts.Name == "" || opts.Intent == "" {
 		return fmt.Errorf("ax init needs a name and a one-line intent")
 	}
+	return nil
+}
+
+func prompt(r *bufio.Reader, label string, dest *string) error {
+	if strings.TrimSpace(*dest) != "" {
+		return nil
+	}
+	fmt.Fprint(os.Stderr, label)
+	line, err := r.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return err
+	}
+	*dest = strings.TrimSpace(line)
 	return nil
 }
 
@@ -150,8 +188,17 @@ func splitCSV(s string) []string {
 	return out
 }
 
-func intentDoc(name, intent string) string {
-	return fmt.Sprintf(`# Intent
+func intentDoc(opts InitOptions) string {
+	forWhom := strings.TrimSpace(opts.ForWhom)
+	if forWhom == "" {
+		forWhom = strings.TrimSpace(opts.Name) + " users."
+	}
+	disciplines := orDefault(opts.Disciplines, "unspecified")
+	constraints := orDefault(opts.Constraints, "none recorded")
+	team := orDefault(opts.Team, "unspecified")
+	weight := orDefault(opts.ProcessWeight, "Low")
+	if opts.Interview || opts.IsTTY {
+		return fmt.Sprintf(`# Intent
 
 ## What is being built
 
@@ -159,7 +206,19 @@ func intentDoc(name, intent string) string {
 
 ## For whom
 
-%s users.
+%s
+
+## Disciplines
+
+%s
+
+## Constraints
+
+%s
+
+## Team
+
+%s
 
 ## Values
 
@@ -171,8 +230,39 @@ Short files.
 
 ## Process weight
 
-Low.
-`, strings.TrimSpace(intent), strings.TrimSpace(name))
+%s
+`, strings.TrimSpace(opts.Intent), forWhom, disciplines, constraints, team, weight)
+	}
+	return fmt.Sprintf(`# Intent
+
+## What is being built
+
+%s
+
+## For whom
+
+%s
+
+## Values
+
+Correctness.
+
+## Taste
+
+Short files.
+
+## Process weight
+
+%s
+`, strings.TrimSpace(opts.Intent), forWhom, weight)
+}
+
+func orDefault(v, fallback string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return fallback
+	}
+	return v
 }
 
 func adoptBody() string {
@@ -193,6 +283,48 @@ Adopt ax.
 
 Checks replace prose rules and every failure points at this decision.
 `
+}
+
+func toolchainBody(opts InitOptions) string {
+	disciplines := orDefault(opts.Disciplines, "unspecified")
+	return fmt.Sprintf(`## Context
+
+The first session needs a recorded toolchain so later checks have a decision to point at.
+
+## Options
+
+- Leave toolchain implicit
+- Write the disciplines and constraints down now
+
+## Choice
+
+Record disciplines: %s. Constraints: %s.
+
+## Why
+
+Interview answers are the starting pin. Change them with a new decision, not by editing this one.
+`, disciplines, orDefault(opts.Constraints, "none recorded"))
+}
+
+func processBody(opts InitOptions) string {
+	weight := orDefault(opts.ProcessWeight, "Low")
+	return fmt.Sprintf(`## Context
+
+Process weight decides how much harness text the team will tolerate.
+
+## Options
+
+- High: many scaffolds and checks up front
+- Low: add process only after something fails
+
+## Choice
+
+%s process weight. Team: %s.
+
+## Why
+
+Start light. Add a check or scaffold when friction or a failed eval says so.
+`, weight, orDefault(opts.Team, "unspecified"))
 }
 
 func writeCapability(root string, cap *core.Capability) error {

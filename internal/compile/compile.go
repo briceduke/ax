@@ -16,9 +16,16 @@ import (
 
 // Options control which targets compile and where output goes.
 type Options struct {
-	Target  string
-	Without string
-	Writer  Writer
+	Target   string
+	Without  string
+	Writer   Writer
+	UseAgent bool
+	Agent    Runner
+}
+
+// Runner is a headless agent that can write adapter files into a directory.
+type Runner interface {
+	Run(dir, task string) (string, error)
 }
 
 // Writer turns a core snapshot into adapter files for one target spec.
@@ -38,6 +45,7 @@ type Snapshot struct {
 	Intent       string
 	Capabilities []*core.Capability
 	Scaffolds    []*core.Scaffold
+	Tools        []core.Tool
 	Hash         string
 	Version      string
 }
@@ -79,7 +87,7 @@ func Run(root string, opts Options, out io.Writer) error {
 	}
 	writer := opts.Writer
 	if writer == nil {
-		writer = Assembler{}
+		writer = defaultWriter(opts)
 	}
 	old, err := core.LoadManifest(compileRoot)
 	if err != nil {
@@ -131,13 +139,25 @@ func loadSnapshot(root, hash string) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	tools, err := core.LoadTools(root)
+	if err != nil {
+		return nil, err
+	}
 	return &Snapshot{
 		Intent:       intent,
 		Capabilities: caps,
 		Scaffolds:    scaffolds,
+		Tools:        tools,
 		Hash:         hash,
 		Version:      version.Version,
 	}, nil
+}
+
+func defaultWriter(opts Options) Writer {
+	if opts.UseAgent && opts.Agent != nil {
+		return agentWriter{run: opts.Agent}
+	}
+	return Assembler{}
 }
 
 func compileTarget(root, name string, snap *Snapshot, writer Writer, old *core.Manifest, hash string) (string, map[string]string, error) {
@@ -149,6 +169,7 @@ func compileTarget(root, name string, snap *Snapshot, writer Writer, old *core.M
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
+	files = withLandings(spec, snap, files)
 	for i := range files {
 		files[i].Data = applyHeader(files[i].Rel, files[i].Data, snap.Hash)
 		files[i].Data = withTrailingLF(core.NormalizeLF(files[i].Data))

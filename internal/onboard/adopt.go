@@ -34,7 +34,7 @@ func Adopt(root string, now time.Time, out io.Writer) error {
 	intentPath := filepath.Join(root, "core", "intent.md")
 	if _, err := os.Stat(intentPath); os.IsNotExist(err) {
 		name := filepath.Base(root)
-		if err := os.WriteFile(intentPath, []byte(intentDoc(name, "Existing project "+name+".")), 0644); err != nil {
+		if err := os.WriteFile(intentPath, []byte(intentDoc(InitOptions{Name: name, Intent: "Existing project " + name + "."})), 0644); err != nil {
 			return err
 		}
 	} else if err != nil {

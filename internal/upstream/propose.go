@@ -28,12 +28,17 @@ type Options struct {
 	PrivateFile string
 	Now         time.Time
 	Submitter   Submitter
+	Submit      bool
+	Command     Commander
 }
 
 // Submitter is the optional GitHub (or other) client. Tests inject a fake. Default is file-only.
 type Submitter interface {
 	Submit(title, body string) (string, error)
 }
+
+// Commander runs an external program. Tests inject a fake; production uses gh.
+type Commander func(args ...string) (string, error)
 
 // Payload is the sanitized issue/PR text written under .ax/upstream/.
 type Payload struct {
@@ -78,8 +83,15 @@ func Run(root string, opts Options, out io.Writer) error {
 	}
 	fmt.Fprintln(out, ".ax/upstream/issue.md")
 	fmt.Fprintln(out, ".ax/upstream/pr.md")
-	if opts.Submitter != nil {
-		url, err := opts.Submitter.Submit("ax upstream: "+opts.Layer, issue)
+	submitter := opts.Submitter
+	if submitter == nil && opts.Submit {
+		if opts.Command == nil {
+			return fmt.Errorf("--submit requires gh on PATH")
+		}
+		submitter = GHSubmitter(opts.Command)
+	}
+	if submitter != nil {
+		url, err := submitter.Submit("ax upstream: "+opts.Layer, issue)
 		if err != nil {
 			return err
 		}

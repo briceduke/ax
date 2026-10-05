@@ -14,7 +14,7 @@ The longer plan is in [docs/target.md](docs/target.md).
 - Run short scored tasks (`ax eval`), propose cuts from friction (`ax retro`), and see whether a temporary note is still needed (`ax ablate`).
 - Copy a shared bundle in (`ax pack add`) or write a cleaned-up fix locally (`ax propose-upstream`). Nothing is merged for you.
 
-You still approve every change. ax does not call language models and does not talk to GitHub unless you wire that up later.
+You still approve every change. ax does not merge GitHub PRs for you. It only talks to a model or to GitHub when a CLI is already on your PATH and you asked (`ax eval` with `agent`/`cursor`/`claude`, `AX_COMPILE_AGENT=1`, or `--submit` with `gh`).
 
 ## Install
 
@@ -34,7 +34,7 @@ ax init --name widget --intent "A small recorder for field notes."
 
 That writes the folders below, logs that you adopted ax, generates the editor files, and leaves you in a state where `ax check` passes.
 
-If stdin is a terminal and you omit the flags, ax asks two questions. Tests and scripts should always pass `--name` and `--intent`.
+If stdin is a terminal, or you pass `--interview`, ax asks what you are building, for whom, disciplines, constraints, who is on the team, and how much process you will tolerate. Answers go into `core/intent.md` and the first toolchain/process decisions. Tests and scripts should pass `--name` and `--intent` and omit `--interview`.
 
 To add ax to a repo that already has code:
 
@@ -44,7 +44,7 @@ ax adopt
 
 That writes a short intent stub, copies the built-in “record a decision” note, and if it finds `go.mod`, registers `go test ./...` as a check. Inferred decisions are marked `reconstructed: true`.
 
-`ax doctor` checks `ax.yaml`, runs `ax check`, and confirms `ax` is on your PATH. Docker is optional. Missing Docker does not fail CI.
+`ax doctor` checks `ax.yaml`, runs `ax check`, and confirms `ax` is on your PATH. If Docker is installed and the project has a `Dockerfile`, doctor builds the image and runs `ax check` inside it. Missing Docker prints `container not verified` and still passes. Pass `--require-container` to fail instead. This repo ships a `Dockerfile` and a thin `.devcontainer` so a clone can use the same Go image.
 
 ## Add ax by hand
 
@@ -128,13 +128,16 @@ ax check
 | `core/capabilities/` | Repeatable jobs you want the agent to do, even when models get smarter. Example: “when we make a choice, write it down.” |
 | `core/scaffolds/` | Temporary “don’t forget this” notes for a weakness the model has today. Each one must say when you will delete it. |
 | `core/evals/` | Short scored tasks. A script or a rubric says pass or fail. |
+| `core/tools.yaml` | Optional local MCP servers (`name`, `command`, `args`). Compile copies them into editor `mcp.json` files. |
 | `core/checks.yaml` | Commands or built-in tests that must stay true. |
 | `log/decisions/` | Choices. One file each. Never edited. |
 | `log/observations/` | Dated facts and how you got them. Eval scores land here too. |
 | `log/friction/` | One-line “this hurt.” |
 | `packs/` | Shared bundles copied in from another project. |
 
-`ax compile` writes `AGENTS.md`, `CLAUDE.md`, and a few hook files so the editor runs `ax check` after you save. It also writes `.generated/manifest.yaml` so it can tell if those files still match what you wrote.
+`ax compile` writes `AGENTS.md`, `CLAUDE.md`, and a few hook files so the editor runs `ax check` after you save. It also writes `.generated/manifest.yaml` so it can tell if those files still match what you wrote. Optional `core/tools.yaml` (name, command, args) is copied into `.cursor/mcp.json` and `.mcp.json`. No product MCP servers are invented.
+
+Default compile is a fixed assembler. Set `AX_COMPILE_AGENT=1` and have an agent CLI on PATH if you want an agent to write the adapters; ax still validates the result. CI and the default path stay assembler-only.
 
 A second `ax compile` with no changes does nothing.
 
@@ -196,8 +199,9 @@ grader:
 
 `ax eval` runs each grader and writes a dated observation (`method: eval`) with the score.
 
-- Script graders: a named check passed, a file exists, or the first number in a file is in range.
-- Rubric graders: required substrings in `core/` and `log/`. This is a stand-in so tests work without calling a model.
+- If `agent`, `cursor`, or `claude` is on PATH, ax runs the eval task in the project directory first, then the grader scores what is on disk. Tests inject a fake runner and never call a paid API.
+- Script graders: a named check passed, a file exists, or the first number in a file is in range. These still run when no agent CLI is present.
+- Rubric graders: required substrings in `core/` and `log/` after an agent run. If no agent CLI is present, the eval is logged as skipped/unavailable. It does not pretend a model ran.
 
 `ax eval --without verify-pinouts` compiles without that temporary note first, then scores.
 
@@ -241,9 +245,9 @@ Built in:
 
 `ax pack add <dir>` copies a pack into `packs/` and merges the files it provides. `ax pack extract` copies selected local files into a pack directory and can replace product words with `{{PARAM}}`. `ax pack bootstrap pcb` writes a six-step empty starter: decide the toolchain, then add checks, evals, capabilities, and scaffolds only after something fails.
 
-`ax propose-upstream` writes a cleaned issue and pull-request draft under `.ax/upstream/`. Absolute paths and anything listed in `.ax/private.txt` are stripped. It does not open GitHub by default.
+`ax propose-upstream` writes a cleaned issue and pull-request draft under `.ax/upstream/`. Absolute paths and anything listed in `.ax/private.txt` are stripped. It does not open GitHub unless you pass `--submit` and `gh` is on PATH. Even then it only files an issue. You still approve the change.
 
-`ax upgrade --from <dir>` reads a `VERSION` file in that directory, copies any new how-we-work notes, bumps the pin in `ax.yaml`, recompiles, runs checks, and writes `.ax/upgrade/report.md`. Fetch from the network is later.
+`ax upgrade` without `--from` clones the ax GitHub repo (injectable in tests) and reads `VERSION`. `--from <dir>` still uses a local tree. It copies any new how-we-work notes, bumps the pin in `ax.yaml`, recompiles, runs checks, and writes `.ax/upgrade/report.md`. `--submit` files a GitHub issue if `gh` exists. There is no auto-merge.
 
 ## Log size
 
@@ -260,12 +264,12 @@ ax compile [--target cursor] [--target claude-code] [--without scaffold-id]
 ax eval [--without scaffold-id] [--runs n]
 ax retro
 ax ablate
-ax propose-upstream [--friction id] [--layer machinery|schema|target|pack] [--change text] [--helps-others]
-ax upgrade [--from dir]
+ax propose-upstream [--friction id] [--layer machinery|schema|target|pack] [--change text] [--helps-others] [--submit]
+ax upgrade [--from dir] [--submit]
 ax pack add <dir>
 ax pack extract <dir> --id <id> [--file path] [--replace old=PARAM]
 ax pack bootstrap <discipline>
-ax init --name <name> --intent <text> [--targets cursor,claude-code]
+ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--interview]
 ax adopt
-ax doctor
+ax doctor [--require-container]
 ```

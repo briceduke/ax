@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/briceduke/ax/internal/ablate"
+	"github.com/briceduke/ax/internal/agent"
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/compile"
 	"github.com/briceduke/ax/internal/eval"
@@ -75,14 +77,14 @@ Usage:
   ax eval [--without <scaffold-id>] [--runs <n>]
   ax retro
   ax ablate
-  ax propose-upstream [--friction <id>] [--layer machinery|schema|target|pack] [--change <text>] [--helps-others]
-  ax upgrade [--from <dir>]
+  ax propose-upstream [--friction <id>] [--layer machinery|schema|target|pack] [--change <text>] [--helps-others] [--submit]
+  ax upgrade [--from <dir>] [--submit]
   ax pack add <dir>
   ax pack extract <dir> --id <id> [--file <path>] [--replace old=PARAM]
   ax pack bootstrap <discipline>
-  ax init --name <name> --intent <text> [--targets cursor,claude-code]
+  ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--interview]
   ax adopt
-  ax doctor
+  ax doctor [--require-container]
 `) + "\n"
 }
 
@@ -171,7 +173,16 @@ func runCompile(args []string) error {
 	if err != nil {
 		return err
 	}
-	return compile.Run(root, compile.Options{Target: flags["target"], Without: flags["without"]}, os.Stdout)
+	opts := compile.Options{Target: flags["target"], Without: flags["without"]}
+	if os.Getenv("AX_COMPILE_AGENT") == "1" {
+		if r := agent.Detect(); r != nil {
+			opts.UseAgent = true
+			opts.Agent = r
+		} else {
+			fmt.Fprintln(os.Stdout, "compile agent unavailable; using assembler")
+		}
+	}
+	return compile.Run(root, opts, os.Stdout)
 }
 
 func runEval(args []string) error {
@@ -197,6 +208,7 @@ func runEval(args []string) error {
 		Runs:     *runs,
 		RunCheck: checks.RunNamed,
 		LogRoot:  orig,
+		Runner:   agent.Detect(),
 	}, os.Stdout)
 	return err
 }
@@ -232,6 +244,7 @@ func runProposeUpstream(args []string) error {
 	layer := fs.String("layer", "machinery", "machinery, schema, target, or pack")
 	change := fs.String("change", "", "proposed change")
 	helps := fs.Bool("helps-others", false, "would this help another project")
+	submit := fs.Bool("submit", false, "create a GitHub issue with gh (does not merge)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -239,17 +252,26 @@ func runProposeUpstream(args []string) error {
 	if err != nil {
 		return err
 	}
-	return upstream.Run(root, upstream.Options{
+	opts := upstream.Options{
 		Friction:    *friction,
 		Layer:       *layer,
 		Change:      *change,
 		HelpsOthers: *helps,
-	}, os.Stdout)
+		Submit:      *submit,
+	}
+	if *submit {
+		if _, err := exec.LookPath("gh"); err != nil {
+			return fmt.Errorf("--submit requires gh on PATH")
+		}
+		opts.Command = ghCommand
+	}
+	return upstream.Run(root, opts, os.Stdout)
 }
 
 func runUpgrade(args []string) error {
 	fs := newFlagSet("upgrade")
 	from := fs.String("from", "", "local machinery directory with a VERSION file")
+	submit := fs.Bool("submit", false, "file a GitHub issue with gh (does not merge)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -257,7 +279,20 @@ func runUpgrade(args []string) error {
 	if err != nil {
 		return err
 	}
-	return upgrade.Run(root, upgrade.Options{From: *from}, os.Stdout)
+	opts := upgrade.Options{From: *from, Submit: *submit}
+	if *from == "" {
+		if _, err := exec.LookPath("git"); err != nil {
+			return fmt.Errorf("upgrade needs --from <dir> (git not on PATH)")
+		}
+		opts.Fetcher = upgrade.GitFetch("", agent.SystemRun)
+	}
+	if *submit {
+		if _, err := exec.LookPath("gh"); err != nil {
+			return fmt.Errorf("--submit requires gh on PATH")
+		}
+		opts.Command = ghCommand
+	}
+	return upgrade.Run(root, opts, os.Stdout)
 }
 
 func runPack(args []string) error {
@@ -311,6 +346,7 @@ func runInit(args []string) error {
 	name := fs.String("name", "", "project name")
 	intent := fs.String("intent", "", "what is being built")
 	targets := fs.String("targets", "cursor,claude-code", "comma-separated editor targets")
+	interview := fs.Bool("interview", false, "ask the full start questions")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -319,11 +355,12 @@ func runInit(args []string) error {
 		return err
 	}
 	return onboard.Init(cwd, onboard.InitOptions{
-		Name:    *name,
-		Intent:  *intent,
-		Targets: *targets,
-		IsTTY:   isTTY(os.Stdin),
-		Stdin:   os.Stdin,
+		Name:      *name,
+		Intent:    *intent,
+		Targets:   *targets,
+		Interview: *interview,
+		IsTTY:     isTTY(os.Stdin),
+		Stdin:     os.Stdin,
 	}, os.Stdout)
 }
 
@@ -341,6 +378,7 @@ func runAdopt(args []string) error {
 
 func runDoctor(args []string) error {
 	fs := newFlagSet("doctor")
+	requireContainer := fs.Bool("require-container", false, "fail if Docker cannot build and run ax check")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -348,7 +386,11 @@ func runDoctor(args []string) error {
 	if err != nil {
 		return err
 	}
-	return onboard.Doctor(root, os.Stdout)
+	return onboard.Doctor(root, onboard.DoctorOptions{RequireContainer: *requireContainer}, os.Stdout)
+}
+
+func ghCommand(args ...string) (string, error) {
+	return agent.SystemRun("", "gh", args...)
 }
 
 func newFlagSet(name string) *flag.FlagSet {

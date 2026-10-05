@@ -151,6 +151,34 @@ func TestCompileHashExcludesScaffold(t *testing.T) {
 	}
 }
 
+func TestLoadTools(t *testing.T) {
+	root := t.TempDir()
+	tools, err := LoadTools(root)
+	if err != nil || len(tools) != 0 {
+		t.Fatalf("missing file: %v %#v", err, tools)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "core", "tools.yaml"), []byte("- name: notes\n  command: python\n  args: [notes.py]\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tools, err = LoadTools(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tools) != 1 || tools[0].Name != "notes" || tools[0].Command != "python" || len(tools[0].Args) != 1 {
+		t.Fatalf("tools = %#v", tools)
+	}
+	if err := os.WriteFile(filepath.Join(root, "core", "tools.yaml"), []byte("- name: notes\n  command: python\n  extra: 1\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = LoadTools(root)
+	if err == nil || !strings.Contains(err.Error(), "yaml") {
+		t.Fatalf("error = %v, want unknown field", err)
+	}
+}
+
 func writeCore(t *testing.T, root string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Join(root, "core"), 0755); err != nil {

@@ -132,6 +132,99 @@ func TestFixtureCompileCheckStaleness(t *testing.T) {
 	}
 }
 
+func TestToolsCompileIntoMCP(t *testing.T) {
+	root := writeCompileProject(t)
+	if err := os.WriteFile(filepath.Join(root, "core", "tools.yaml"), []byte("- name: notes\n  command: python\n  args: [notes.py]\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Run(root, Options{}, &buf); err != nil {
+		t.Fatalf("compile: %v\n%s", err, buf.String())
+	}
+	for _, rel := range []string{".cursor/mcp.json", ".mcp.json"} {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(data)
+		if !strings.Contains(text, `"notes"`) || !strings.Contains(text, `"python"`) || !strings.Contains(text, `"notes.py"`) {
+			t.Fatalf("%s = %s", rel, text)
+		}
+	}
+}
+
+func TestAgentWriterValidates(t *testing.T) {
+	root := writeCompileProject(t)
+	var called int
+	fake := runnerFunc(func(dir, task string) (string, error) {
+		called++
+		name := strings.TrimSpace(readFile(t, filepath.Join(dir, "TARGET")))
+		spec, err := targets.Load(name)
+		if err != nil {
+			return "", err
+		}
+		hash, err := core.CompileHash(root, nil, nil)
+		if err != nil {
+			return "", err
+		}
+		snap, err := loadSnapshot(root, hash)
+		if err != nil {
+			return "", err
+		}
+		files, err := Assembler{}.Write(spec, snap)
+		if err != nil {
+			return "", err
+		}
+		for _, f := range files {
+			path := filepath.Join(dir, filepath.FromSlash(f.Rel))
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				return "", err
+			}
+			if err := os.WriteFile(path, f.Data, 0644); err != nil {
+				return "", err
+			}
+		}
+		return "ok", nil
+	})
+	var buf bytes.Buffer
+	if err := Run(root, Options{UseAgent: true, Agent: fake}, &buf); err != nil {
+		t.Fatalf("compile: %v\n%s", err, buf.String())
+	}
+	if called < 2 {
+		t.Fatalf("agent called %d times, want both targets", called)
+	}
+	if _, err := os.Stat(filepath.Join(root, "AGENTS.md")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAgentWriterMissingFileFails(t *testing.T) {
+	root := writeCompileProject(t)
+	fake := runnerFunc(func(dir, task string) (string, error) {
+		return "did nothing", nil
+	})
+	var buf bytes.Buffer
+	err := Run(root, Options{UseAgent: true, Agent: fake}, &buf)
+	if err == nil || !strings.Contains(err.Error(), "did not write") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+type runnerFunc func(dir, task string) (string, error)
+
+func (f runnerFunc) Run(dir, task string) (string, error) {
+	return f(dir, task)
+}
+
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
 func TestBuiltinRecordDecisionLands(t *testing.T) {
 	root := t.TempDir()
 	for _, dir := range []string{"core/capabilities", "core/scaffolds"} {

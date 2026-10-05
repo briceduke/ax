@@ -15,12 +15,16 @@ type Result struct {
 	Passed  int
 	Runs    int
 	Detail  string
+	Skipped bool
 	Retire  bool
 	With    string
 	Without string
 }
 
 func (r Result) Score() string {
+	if r.Skipped {
+		return "skipped"
+	}
 	return fmt.Sprintf("%d/%d", r.Passed, r.Runs)
 }
 

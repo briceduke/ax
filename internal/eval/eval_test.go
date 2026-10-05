@@ -112,6 +112,91 @@ grader:
 	}
 }
 
+func TestRubricSkipsWithoutRunner(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "core/evals/readable.md", `---
+id: readable
+related: []
+runs: 1
+---
+task: intent names the product
+grader:
+  kind: rubric
+  must: ["hardware fixture"]
+`)
+	writeFile(t, root, "core/intent.md", "A hardware fixture used to test ax.\n")
+	var buf bytes.Buffer
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	results, err := Run(root, Options{Now: now, Runs: 1}, &buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || !results[0].Skipped {
+		t.Fatalf("results = %+v", results)
+	}
+	if !strings.Contains(buf.String(), "skip readable") {
+		t.Fatalf("output = %q", buf.String())
+	}
+	found := false
+	entries, err := os.ReadDir(filepath.Join(root, "log", "observations"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		data, err := os.ReadFile(filepath.Join(root, "log", "observations", e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(data), "skipped:") && strings.Contains(string(data), "method: eval") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected skipped eval observation")
+	}
+}
+
+func TestFakeRunnerThenGrade(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "core/evals/ran.md", `---
+id: ran
+related: []
+runs: 1
+---
+task: write the marker file
+grader:
+  kind: script
+  file: marker.txt
+`)
+	var ranTask string
+	fake := runnerFunc(func(dir, task string) (string, error) {
+		ranTask = task
+		return "", os.WriteFile(filepath.Join(dir, "marker.txt"), []byte("ok\n"), 0644)
+	})
+	var buf bytes.Buffer
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	results, err := Run(root, Options{Now: now, Runner: fake}, &buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ranTask != "write the marker file" {
+		t.Fatalf("task = %q", ranTask)
+	}
+	if len(results) != 1 || results[0].Skipped || results[0].Score() != "1/1" {
+		t.Fatalf("results = %+v", results)
+	}
+	if !strings.Contains(buf.String(), "ok   ran 1/1") {
+		t.Fatalf("output = %q", buf.String())
+	}
+}
+
+type runnerFunc func(dir, task string) (string, error)
+
+func (f runnerFunc) Run(dir, task string) (string, error) {
+	return f(dir, task)
+}
+
 type graderFunc func(root string, ev *Eval) error
 
 func (f graderFunc) Grade(root string, ev *Eval) error {
