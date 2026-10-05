@@ -1,0 +1,44 @@
+name: auto-merge-release-please
+
+# Only squash-merges release-please PRs, and only after the ci workflow is green.
+# Does not merge contributor PRs.
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+
+jobs:
+  merge:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Squash-merge release-please PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          case "$HEAD_BRANCH" in
+            release-please--*) ;;
+            *)
+              echo "skip: $HEAD_BRANCH is not a release-please branch"
+              exit 0
+              ;;
+          esac
+          number=$(gh pr list --state open --head "$HEAD_BRANCH" --json number,labels,headRefOid \
+            --jq '.[] | select(.headRefOid == env.HEAD_SHA) | select([.labels[].name] | index("autorelease: pending")) | .number')
+          if [ -z "$number" ]; then
+            echo "skip: no open release-please PR at $HEAD_SHA"
+            exit 0
+          fi
+          state=$(gh pr view "$number" --json state --jq .state)
+          if [ "$state" != "OPEN" ]; then
+            echo "skip: PR #$number is $state"
+            exit 0
+          fi
+          gh pr merge "$number" --squash --delete-branch
