@@ -18,19 +18,21 @@ You still approve every change. ax does not merge GitHub PRs for you. It only ta
 
 ## Install
 
-You need Go. From this repo:
+On a normal Windows PC, open [the latest Release](https://github.com/briceduke/ax/releases/latest), download `ax_*_windows_amd64.zip`, unzip it, and put `ax.exe` on your PATH so the command is `ax` (not `ax.exe`). ARM laptop: use `windows_arm64`. Mac: `darwin_arm64` (Apple Silicon) or `darwin_amd64`. Linux: `linux_amd64` or `linux_arm64`. The zip/tar is just a wrapper; the program is inside.
+
+Or build from this repo if you have Go:
 
 ```powershell
 go build -o ax.exe ./cmd/ax
 ```
 
-Put `ax.exe` on your PATH and name it so the command is `ax`. After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits. Tagged GitHub Releases also ship Windows, Linux, and macOS binaries.
+After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits.
 
 ## Releases
 
 A conventional `feat` or `fix` merged to `main` releases itself. No click for the normal path. Commits must start with `feat`, `fix`, or `docs` (`feat!:` or a `BREAKING CHANGE:` footer for breaking). `docs` does not bump. `feat` is minor. `fix` is patch. On 0.x, breaking is minor; 1.0 is a later, conscious choice. Agents must use those prefixes — do not use `chore` for user-facing work.
 
-release-please opens a version PR that bumps `VERSION` and `internal/version/version.go` together. After CI is green, a workflow squash-merges only that PR, tags `v*`, and GoReleaser attaches the binaries. `ax upgrade` still clones this git repo and reads `VERSION`; it does not read Release zips.
+release-please opens a version PR that bumps `VERSION` and `internal/version/version.go` together. After CI is green, a workflow squash-merges only that PR, tags `v*`, and GoReleaser attaches zip/tar files plus a raw `ax` / `ax.exe` for each OS. `ax upgrade` still clones this git repo and reads `VERSION`; it does not install those files.
 
 ## Start a new project
 
