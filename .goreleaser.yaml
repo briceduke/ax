@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: ax
+
+builds:
+  - id: ax
+    main: ./cmd/ax
+    binary: ax
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  use: git
+  filters:
+    include:
+      - "^feat"
+      - "^fix"
+      - "^docs"
+    exclude:
+      - "^chore"
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^fix"
+      order: 1
+    - title: Documentation
+      regexp: "^docs"
+      order: 2
+
+release:
+  name_template: "v{{.Version}}"
+  # release-please already opened the GitHub Release; attach binaries to it.
+  mode: keep-existing

@@ -1,0 +1,28 @@
+---
+description: Conventional commit prefixes required for unattended version bumps
+alwaysApply: true
+---
+
+# Conventional commits
+
+Every commit on this repo must start with `feat`, `fix`, or `docs`. Those prefixes drive the next version. Do not use `chore` for user-facing work. CI and release-please may use `chore` on the version PR; agents must not.
+
+- `feat:` new user-visible behavior → minor (0.1.0 → 0.2.0)
+- `fix:` bug fix → patch (0.1.0 → 0.1.1)
+- `docs:` documentation only → changelog, no bump
+- Breaking: `feat!:` (or `fix!:`) or a `BREAKING CHANGE:` footer → minor while we are on 0.x. Do not jump to 1.0 unless a person chooses that on purpose.
+
+Examples:
+
+```
+feat: add ax doctor --require-container
+fix: keep VERSION a single semver line
+docs: explain how releases work
+feat!: drop support for missing ax.yaml
+```
+
+```
+feat: rename the log friction command
+
+BREAKING CHANGE: `ax log pain` is removed; use `ax log friction`.
+```

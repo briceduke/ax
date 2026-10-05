@@ -24,7 +24,13 @@ You need Go. From this repo:
 go build -o ax.exe ./cmd/ax
 ```
 
-Put `ax.exe` on your PATH and name it so the command is `ax`. After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits.
+Put `ax.exe` on your PATH and name it so the command is `ax`. After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits. Tagged GitHub Releases also ship Windows, Linux, and macOS binaries.
+
+## Releases
+
+A conventional `feat` or `fix` merged to `main` releases itself. No click for the normal path. Commits must start with `feat`, `fix`, or `docs` (`feat!:` or a `BREAKING CHANGE:` footer for breaking). `docs` does not bump. `feat` is minor. `fix` is patch. On 0.x, breaking is minor; 1.0 is a later, conscious choice. Agents must use those prefixes — do not use `chore` for user-facing work.
+
+release-please opens a version PR that bumps `VERSION` and `internal/version/version.go` together. After CI is green, a workflow squash-merges only that PR, tags `v*`, and GoReleaser attaches the binaries. `ax upgrade` still clones this git repo and reads `VERSION`; it does not read Release zips.
 
 ## Start a new project
 
@@ -247,7 +253,7 @@ Built in:
 
 `ax propose-upstream` writes a cleaned issue and pull-request draft under `.ax/upstream/`. Absolute paths and anything listed in `.ax/private.txt` are stripped. It does not open GitHub unless you pass `--submit` and `gh` is on PATH. Even then it only files an issue. You still approve the change.
 
-`ax upgrade` without `--from` clones the ax GitHub repo (injectable in tests) and reads `VERSION`. `--from <dir>` still uses a local tree. It copies any new how-we-work notes, bumps the pin in `ax.yaml`, recompiles, runs checks, and writes `.ax/upgrade/report.md`. `--submit` files a GitHub issue if `gh` exists. There is no auto-merge.
+`ax upgrade` without `--from` clones the ax GitHub repo (injectable in tests) and reads `VERSION`. It does not use GitHub Release zips. `--from <dir>` still uses a local tree. It copies any new how-we-work notes, bumps the pin in `ax.yaml`, recompiles, runs checks, and writes `.ax/upgrade/report.md`. `--submit` files a GitHub issue if `gh` exists. There is no auto-merge.
 
 ## Log size
 
