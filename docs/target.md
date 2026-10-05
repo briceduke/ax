@@ -38,7 +38,7 @@ Three kinds of files:
 
 **Lasts for months.** Temporary “the model still gets this wrong” notes. Each one has a kill condition.
 
-**Thrown away and regenerated.** `AGENTS.md`, `CLAUDE.md`, slash commands, hooks, MCP JSON.
+**Thrown away and regenerated.** `AGENTS.md`, `CLAUDE.md`, skills, hooks, MCP JSON.
 
 **Built:** the lasting files, the temporary notes, scored evals, Cursor / Claude Code generated files, optional `core/tools.yaml` → MCP JSON, and local pack/upstream/upgrade drafts.
 
@@ -46,7 +46,7 @@ Three kinds of files:
 
 ## Starting a project
 
-**Built.** `ax init --name --intent` writes the minimum tree, a `Dockerfile`, the built-in record-decision note, the first decision, and compiles. `--interview` or a TTY asks what it is, for whom, disciplines, constraints, who is on the team, and process weight, and writes those into intent plus toolchain/process decisions. `ax adopt` reads an existing repo, writes an intent stub, and can register `go test ./...` if it finds Go.
+**Built.** `ax init --name --intent` writes the minimum tree, a `Dockerfile`, the built-in notes (`own-the-harness`, `log-friction`, `sync-harness`, `record-decision`), the first decision, and compiles. `--interview` or a TTY asks the project name, what you are building, for whom, disciplines, constraints, who is on the team, and process weight, and writes those into intent plus toolchain/process decisions. Values and Taste stay Correctness and Short files unless you change them later. `ax adopt` reads an existing repo, writes an intent stub, and can register `go test ./...` if it finds Go.
 
 ## The log
 
@@ -62,9 +62,9 @@ One file per note, named with a date and a short slug, so two people can add fil
 
 You run `ax compile`. It reads what you wrote and writes the files each editor wants. If nothing changed, it stops. If you edit a generated file, checks fail until you compile again from the source.
 
-Supporting a new editor should mean adding one short description of where that editor keeps instructions, commands, hooks, and tools.
+Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools.
 
-**Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, the check that catches a stale copy, the built-in `/record-decision` command, and optional tools.yaml compiled into `.cursor/mcp.json` / `.mcp.json`.
+**Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, the check that catches a stale copy, `own-the-harness` in `AGENTS.md` / `CLAUDE.md`, user-invocable skills at `.cursor/skills/{id}/SKILL.md` and `.claude/skills/{id}/SKILL.md` (`log-friction`, `sync-harness`, `record-decision`), and optional tools.yaml compiled into `.cursor/mcp.json` / `.mcp.json`.
 
 **Started:** an AI writing those files is opt-in (`AX_COMPILE_AGENT=1`) and still goes through the validator. Default and CI stay assembler-only.
 
@@ -124,6 +124,7 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 | `ax propose-upstream` | Write a cleaned-up fix locally | Built (`--submit` files a gh issue, never merges) |
 | `ax upgrade` | Update the project pin and replace this ax from GitHub Releases | Built (`--skip-binary` leaves the exe alone; `--submit` files an issue, never merges) |
 | `ax doctor` | Prove the repo’s files, PATH, and optional container are sane | Built |
+| `ax version` | Print the binary version | Built |
 
 ## Build order
 
@@ -131,7 +132,7 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 | --- | --- | --- |
 | 1. Skeleton | `ax check` passes on real product repos | Built |
 | 2. Generate editor files | You and a teammate can use Cursor and Claude Code on the same repo | Built |
-| 3. Knowledge | `/record-decision` exists after compile; a choice is written into the log | Built |
+| 3. Knowledge | harness skills exist after compile; a choice is written into the log | Built |
 | 4. Harness tests | Scores show up in the log | Built (rubrics skip without a CLI) |
 | 5. Retro | One retro writes a proposal that includes a deletion | Built (human still merges) |
 | 6. Drop workarounds | Ablation writes numbers and a keep-or-drop proposal | Built (human still deletes) |

@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/briceduke/ax/internal/version"
 )
 
 func TestCheckFixtures(t *testing.T) {
@@ -60,6 +62,22 @@ func TestEvalHardwareWritesScores(t *testing.T) {
 	}
 	if len(entries) < 3 {
 		t.Fatalf("got %d observations", len(entries))
+	}
+}
+
+func TestVersionPrintsConstWithoutRepo(t *testing.T) {
+	t.Chdir(t.TempDir())
+	stdout, stderr := capture(t, func() error {
+		return run([]string{"version"})
+	})
+	if stderr != "" {
+		t.Fatalf("stderr = %q", stderr)
+	}
+	if stdout != version.Version+"\n" {
+		t.Fatalf("stdout = %q, want %q", stdout, version.Version+"\n")
+	}
+	if !strings.Contains(usage(), "ax version") {
+		t.Fatal("usage missing ax version")
 	}
 }
 

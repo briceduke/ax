@@ -31,8 +31,29 @@ func TestInitCheckPasses(t *testing.T) {
 	if err := checks.Run(root, checks.Options{Tier: checks.TierFull, All: true}, &buf); err != nil {
 		t.Fatalf("check after init: %v\n%s", err, buf.String())
 	}
-	if _, err := os.Stat(filepath.Join(root, ".cursor", "commands", "record-decision.md")); err != nil {
-		t.Fatal(err)
+	for _, id := range []string{"own-the-harness", "log-friction", "sync-harness", "record-decision"} {
+		if _, err := os.Stat(filepath.Join(root, "core", "capabilities", id+".md")); err != nil {
+			t.Fatalf("init missing capability %s: %v", id, err)
+		}
+	}
+	for _, id := range []string{"record-decision", "log-friction", "sync-harness"} {
+		for _, dir := range []string{
+			filepath.Join(root, ".cursor", "skills", id, "SKILL.md"),
+			filepath.Join(root, ".claude", "skills", id, "SKILL.md"),
+		} {
+			if _, err := os.Stat(dir); err != nil {
+				t.Fatalf("missing skill %s: %v", dir, err)
+			}
+		}
+	}
+	for _, rel := range []string{"AGENTS.md", "CLAUDE.md"} {
+		data, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(data), "own-the-harness") {
+			t.Fatalf("%s missing own-the-harness:\n%s", rel, data)
+		}
 	}
 }
 

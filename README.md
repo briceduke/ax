@@ -9,7 +9,7 @@ The longer plan is in [docs/target.md](docs/target.md).
 - Start a project with `ax init`, or add ax to an existing repo with `ax adopt`.
 - Write down what you are building.
 - Write down decisions, measurements, and things that went wrong.
-- Turn that into `AGENTS.md` (Cursor) and `CLAUDE.md` (Claude Code). `/record-decision` is always available after compile.
+- Turn that into `AGENTS.md` (Cursor) and `CLAUDE.md` (Claude Code). The agent runs `ax` from those files. Slash commands such as `/record-decision` still exist after compile if you want a skill immediately.
 - Run checks that fail if those files are out of date or the log is malformed.
 - Run short scored tasks (`ax eval`), propose cuts from friction (`ax retro`), and see whether a temporary note is still needed (`ax ablate`).
 - Copy a shared bundle in (`ax pack add`) or write a cleaned-up fix locally (`ax propose-upstream`). Nothing is merged for you.
@@ -18,15 +18,13 @@ You still approve every change. ax does not merge GitHub PRs for you. It only ta
 
 ## Install
 
-On a normal Windows PC, open [the latest Release](https://github.com/briceduke/ax/releases/latest), download `ax_*_windows_amd64.exe` (or the `.zip` and unzip it), and put it on your PATH so the command is `ax`. After that, `ax upgrade` replaces this file with the newest Release and, if you are in a product repo, updates the project pin too. Outside a product repo it only updates the binary.
+On a normal Windows PC, open [the latest Release](https://github.com/briceduke/ax/releases/latest), download `ax_*_windows_amd64.exe` (or the `.zip` and unzip it), and put it on your PATH so the command is `ax`. Open a new terminal and run `ax version`. You should see the same version string as that release.
 
 ARM laptop: `windows_arm64`. Mac: `darwin_arm64` or `darwin_amd64`. Linux: `linux_amd64` or `linux_arm64`.
 
-Or build from this repo if you have Go:
+After that, `ax upgrade` replaces the binary. Outside a product repo it only replaces the binary. Inside one, it also updates the project pin.
 
-```powershell
-go build -o ax.exe ./cmd/ax
-```
+`go build -o ax.exe ./cmd/ax` is only for changing ax itself, in this repo.
 
 After you set up a project, Cursor and Claude will run `ax check --tier fast` after edits.
 
@@ -38,13 +36,15 @@ release-please opens a version PR that bumps `VERSION` and `internal/version/ver
 
 ## Start a new project
 
+After Install, `ax version` should print. Then:
+
 ```powershell
 ax init --name widget --intent "A small recorder for field notes."
 ```
 
 That writes the folders below, logs that you adopted ax, generates the editor files, and leaves you in a state where `ax check` passes.
 
-If stdin is a terminal, or you pass `--interview`, ax asks what you are building, for whom, disciplines, constraints, who is on the team, and how much process you will tolerate. Answers go into `core/intent.md` and the first toolchain/process decisions. Tests and scripts should pass `--name` and `--intent` and omit `--interview`.
+If stdin is a terminal, or you pass `--interview`, ax asks the project name, what you are building, for whom, disciplines, constraints, who is on the team, and process weight. Answers go into `core/intent.md` and the first toolchain/process decisions. Values and Taste stay Correctness and Short files. Tests and scripts should pass `--name` and `--intent` and omit `--interview`.
 
 To add ax to a repo that already has code:
 
@@ -52,7 +52,7 @@ To add ax to a repo that already has code:
 ax adopt
 ```
 
-That writes a short intent stub, copies the built-in “record a decision” note, and if it finds `go.mod`, registers `go test ./...` as a check. Inferred decisions are marked `reconstructed: true`.
+That writes a short intent stub, copies the built-in harness notes (`own-the-harness`, `log-friction`, `sync-harness`, `record-decision`), and if it finds `go.mod`, registers `go test ./...` as a check. Inferred decisions are marked `reconstructed: true`.
 
 `ax doctor` checks `ax.yaml`, runs `ax check`, and confirms `ax` is on your PATH. If Docker is installed and the project has a `Dockerfile`, doctor builds the image and runs `ax check` inside it. Missing Docker prints `container not verified` and still passes. Pass `--require-container` to fail instead. This repo ships a `Dockerfile` and a thin `.devcontainer` so a clone can use the same Go image.
 
@@ -68,7 +68,7 @@ packs: []
 
 Add `.ax/` to `.gitignore`. Optional but useful: in `.gitattributes`, put `* text=auto eol=lf` so Windows and Linux hash files the same way.
 
-Create `core/intent.md` (under a page). Cover what it is, who it is for, what you value, what “good” looks like, and how much process you will tolerate.
+Create `core/intent.md` (under a page). Cover what is being built, for whom, values, taste, and process weight.
 
 Make empty folders:
 
@@ -93,15 +93,19 @@ Run these from anywhere inside the repo. ax walks up until it finds `ax.yaml`.
 
 ## Day to day
 
-You edit the files under `core/` and `log/`. You do not edit `AGENTS.md` or `CLAUDE.md`. Those are copies. If you change `core/intent.md` or add a how-we-work note, run `ax compile` again. If you edit `AGENTS.md` by hand, `ax check` fails on purpose.
+Describe the task in chat. The agent reads `AGENTS.md`, then runs `ax log`, `ax compile`, and `ax check` when those apply. You approve or reject the diff.
+
+Slash commands such as `/record-decision` still exist after compile. Type one if you want that skill run immediately. You do not have to.
+
+You do not edit `AGENTS.md` or `CLAUDE.md`. Those are copies. If you edit `AGENTS.md` by hand, `ax check` fails on purpose.
 
 **Something went wrong or felt heavy**
+
+The agent runs `ax log friction` with one line. That is the whole file.
 
 ```powershell
 ax log friction "the agent guessed pin names instead of reading the datasheet"
 ```
-
-One line. That is the whole file.
 
 **You measured something**
 
@@ -111,11 +115,7 @@ ax log observation "4.1 mA while recording" --method "ammeter on the dev board"
 
 **You made a real choice**
 
-```powershell
-ax log decision "detent twist is the power switch"
-```
-
-Or type `/record-decision` in Cursor or Claude Code. Fill in the four sections. Do not go back and edit an old decision. Write a new one. If it replaces an old one:
+The agent runs `ax log decision` and fills the four sections. Do not go back and edit an old decision. Write a new one. If it replaces an old one:
 
 ```powershell
 ax log decision "use a slide switch" --supersedes 2026-10-04-detent-twist-is-the-power-switch
@@ -125,10 +125,14 @@ Ask whether a machine can test the choice. If yes, add a check in the same chang
 
 **Then**
 
+The agent runs:
+
 ```powershell
 ax compile
 ax check
 ```
+
+Ask in chat when you want `ax eval` or `ax retro`. Leave a retro proposal unmerged until you accept it.
 
 ## The folders, in plain language
 
@@ -145,7 +149,7 @@ ax check
 | `log/friction/` | One-line “this hurt.” |
 | `packs/` | Shared bundles copied in from another project. |
 
-`ax compile` writes `AGENTS.md`, `CLAUDE.md`, and a few hook files so the editor runs `ax check` after you save. It also writes `.generated/manifest.yaml` so it can tell if those files still match what you wrote. Optional `core/tools.yaml` (name, command, args) is copied into `.cursor/mcp.json` and `.mcp.json`. No product MCP servers are invented.
+`ax compile` writes `AGENTS.md`, `CLAUDE.md`, skill files under `.cursor/skills/` and `.claude/skills/`, and a few hook files so the editor runs `ax check` after you save. It also writes `.generated/manifest.yaml` so it can tell if those files still match what you wrote. Optional `core/tools.yaml` (name, command, args) is copied into `.cursor/mcp.json` and `.mcp.json`. No product MCP servers are invented.
 
 Default compile is a fixed assembler. Set `AX_COMPILE_AGENT=1` and have an agent CLI on PATH if you want an agent to write the adapters; ax still validates the result. CI and the default path stay assembler-only.
 
@@ -167,12 +171,12 @@ Write a dated entry: context, options considered, choice, why.
 ```
 
 - No `hints` — the text is copied into `AGENTS.md` / `CLAUDE.md` and the agent is supposed to do it on its own.
-- `hints: [user-invocable]` — you get a Cursor command and a Claude skill you can type, like `/record-decision`.
+- `hints: [user-invocable]` — compile writes a Cursor skill at `.cursor/skills/{id}/SKILL.md` and a Claude skill at `.claude/skills/{id}/SKILL.md`. You can type `/{id}` if you want that skill now.
 - `hints: [isolation]` — a separate agent file, for work you want in its own session.
 
 Extra fields in that top matter are errors. ax will not guess.
 
-`record-decision` ships with ax. Compile includes it even if the project file is missing. After compile you can type `/record-decision`.
+Init writes four built-ins. `own-the-harness` has no hints, so it lands in `AGENTS.md`. `log-friction`, `sync-harness`, and `record-decision` are user-invocable skills. Compile includes them even if the project file is missing.
 
 ## Temporary notes (scaffolds)
 
@@ -282,4 +286,5 @@ ax pack bootstrap <discipline>
 ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--interview]
 ax adopt
 ax doctor [--require-container]
+ax version
 ```

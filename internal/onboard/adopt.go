@@ -40,16 +40,24 @@ func Adopt(root string, now time.Time, out io.Writer) error {
 	} else if err != nil {
 		return err
 	}
-	if _, err := os.Stat(filepath.Join(root, "core", "capabilities", "record-decision.md")); os.IsNotExist(err) {
-		data, err := builtins.CapabilityFile("record-decision")
+	caps, err := builtins.Capabilities()
+	if err != nil {
+		return err
+	}
+	for _, cap := range caps {
+		path := filepath.Join(root, "core", "capabilities", cap.ID+".md")
+		if _, err := os.Stat(path); err == nil {
+			continue
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+		data, err := builtins.CapabilityFile(cap.ID)
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(root, "core", "capabilities", "record-decision.md"), data, 0644); err != nil {
+		if err := os.WriteFile(path, data, 0644); err != nil {
 			return err
 		}
-	} else if err != nil {
-		return err
 	}
 	body := `## Context
 

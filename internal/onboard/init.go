@@ -83,12 +83,14 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte(intentDoc(opts)), 0644); err != nil {
 		return err
 	}
-	cap, err := builtins.RecordDecision()
+	caps, err := builtins.Capabilities()
 	if err != nil {
 		return err
 	}
-	if err := writeCapability(root, cap); err != nil {
-		return err
+	for _, cap := range caps {
+		if err := writeCapability(root, cap); err != nil {
+			return err
+		}
 	}
 	rel, err := logbook.WriteDecision(root, "adopt ax for harness management", "", adoptBody(), opts.Now)
 	if err != nil {
