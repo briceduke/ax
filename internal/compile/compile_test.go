@@ -10,6 +10,7 @@ import (
 
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/version"
 	"github.com/briceduke/ax/targets"
 )
 
@@ -94,7 +95,7 @@ func TestFixtureCompileCheckStaleness(t *testing.T) {
 	src := filepath.Join(repo, "testdata", "fixtures", "hardware")
 	root := t.TempDir()
 	copyTestTree(t, src, root)
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
@@ -232,7 +233,7 @@ func TestBuiltinRecordDecisionLands(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n"), 0644); err != nil {
@@ -341,7 +342,7 @@ func writeCompileProject(t *testing.T) string {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: 0.1.0\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "ax.yaml"), []byte("ax: "+version.Version+"\ntargets: [cursor, claude-code]\npacks: []\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "core", "intent.md"), []byte("# Intent\n\nA compile fixture.\n"), 0644); err != nil {
