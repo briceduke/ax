@@ -108,10 +108,15 @@ func TestInstallWritesSkillsUnderHome(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	if !strings.Contains(stdout, "wrote /ax skills") {
+	if !strings.Contains(stdout, "wrote /ax and /ax-migrate skills") {
 		t.Fatalf("stdout = %q", stdout)
 	}
-	for _, rel := range []string{".cursor/skills/ax/SKILL.md", ".claude/skills/ax/SKILL.md"} {
+	for _, rel := range []string{
+		".cursor/skills/ax/SKILL.md",
+		".claude/skills/ax/SKILL.md",
+		".cursor/skills/ax-migrate/SKILL.md",
+		".claude/skills/ax-migrate/SKILL.md",
+	} {
 		data, err := os.ReadFile(filepath.Join(home, filepath.FromSlash(rel)))
 		if err != nil {
 			t.Fatalf("missing %s: %v", rel, err)

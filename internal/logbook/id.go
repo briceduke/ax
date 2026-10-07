@@ -54,15 +54,6 @@ func RelPath(kind, id string) string {
 	return RelDir(kind) + "/" + id + ".md"
 }
 
-// TitleFromID turns a date-slug id into a short title for root-file lists.
-func TitleFromID(id string) string {
-	parts := strings.Split(id, "-")
-	if len(parts) < 4 {
-		return strings.ReplaceAll(id, "-", " ")
-	}
-	return strings.ReplaceAll(strings.Join(parts[3:], "-"), "-", " ")
-}
-
 // ValidID reports whether id matches the date-slug pattern.
 func ValidID(id string) bool {
 	return idPattern.MatchString(id)

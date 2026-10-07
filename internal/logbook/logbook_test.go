@@ -131,6 +131,8 @@ date: 2026-10-01
 
 ## Choice
 
+Use ax.
+
 ## Why
 `,
 			want: "does not match filename",
@@ -224,7 +226,7 @@ func TestWriteAndValidate(t *testing.T) {
 	if err := ValidateFile(filepath.Join(root, filepath.FromSlash(rel)), "observation"); err != nil {
 		t.Fatal(err)
 	}
-	rel, err = WriteDecision(root, "adopt ax for harness management", "", "", now)
+	rel, err = WriteDecision(root, "adopt ax for harness management", "", "## Context\n\nNeed a harness.\n\n## Options\n\n- none\n\n## Choice\n\nAdopt ax.\n\n## Why\n\nChecks.\n", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,9 +235,29 @@ func TestWriteAndValidate(t *testing.T) {
 	}
 }
 
+func TestChoiceSentence(t *testing.T) {
+	ok, err := ChoiceSentence("## Context\n\n## Options\n\n## Choice\n\nAsk before adding a dependency.\n\n## Why\n\nCost.\n")
+	if err != nil || ok != "Ask before adding a dependency." {
+		t.Fatalf("got %q err=%v", ok, err)
+	}
+	cases := []struct {
+		body, want string
+	}{
+		{"## Choice\n\n## Why\n", "choice is empty"},
+		{"## Choice\n\nUse bun. Skip npm.\n\n## Why\n", "one sentence"},
+		{"## Choice\n\n" + strings.Repeat("a", 201) + "\n\n## Why\n", "max 200"},
+	}
+	for _, tc := range cases {
+		_, err := ChoiceSentence(tc.body)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Fatalf("body %q error = %v, want %q", tc.body, err, tc.want)
+		}
+	}
+}
+
 func TestDecisionTooLong(t *testing.T) {
 	var b strings.Builder
-	b.WriteString("---\nid: 2026-10-01-x\nkind: decision\ndate: 2026-10-01\n---\n\n## Context\n\n## Options\n\n## Choice\n\n## Why\n")
+	b.WriteString("---\nid: 2026-10-01-x\nkind: decision\ndate: 2026-10-01\n---\n\n## Context\n\n## Options\n\n## Choice\n\nAx.\n\n## Why\n")
 	for i := 0; i < 60; i++ {
 		b.WriteString("line\n")
 	}

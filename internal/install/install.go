@@ -1,10 +1,14 @@
 package install
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 )
+
+//go:embed migrate.md
+var migrateBody string
 
 const skillBody = "---\n" +
 	"name: ax\n" +
@@ -20,24 +24,29 @@ const skillBody = "---\n" +
 	"5. Saving writes `AGENTS.md` and `CLAUDE.md` before the command returns. The next chat already has the vision.\n\n" +
 	"If `.ax` already exists, say so. Ordinary chat uses `AGENTS.md` or `CLAUDE.md`. They do not need /ax again for ordinary work.\n"
 
-var skillRels = []string{
-	".cursor/skills/ax/SKILL.md",
-	".claude/skills/ax/SKILL.md",
+var skillFiles = []struct {
+	rel  string
+	body string
+}{
+	{".cursor/skills/ax/SKILL.md", skillBody},
+	{".claude/skills/ax/SKILL.md", skillBody},
+	{".cursor/skills/ax-migrate/SKILL.md", migrateBody},
+	{".claude/skills/ax-migrate/SKILL.md", migrateBody},
 }
 
-// WriteSkills writes the /ax skill under home/.cursor and home/.claude.
+// WriteSkills writes /ax and /ax-migrate under home/.cursor and home/.claude.
 // Tests pass a temp directory. Do not default this to the real user home.
 func WriteSkills(home string) error {
 	home = filepath.Clean(home)
 	if home == "" || home == "." {
 		return fmt.Errorf("install home is empty")
 	}
-	for _, rel := range skillRels {
-		path := filepath.Join(home, filepath.FromSlash(rel))
+	for _, skill := range skillFiles {
+		path := filepath.Join(home, filepath.FromSlash(skill.rel))
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path, []byte(skillBody), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(skill.body), 0644); err != nil {
 			return err
 		}
 	}

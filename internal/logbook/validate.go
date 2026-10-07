@@ -102,6 +102,9 @@ func parseDecision(data []byte) (*Decision, error) {
 	if err := requireHeadings(d.Body, decisionHeadings); err != nil {
 		return nil, err
 	}
+	if _, err := ChoiceSentence(d.Body); err != nil {
+		return nil, err
+	}
 	return &d, nil
 }
 

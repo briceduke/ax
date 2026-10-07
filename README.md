@@ -12,7 +12,7 @@ You open a folder and talk about what you are making. The agent asks until that 
 
 Saving the vision, a decision, a measurement, or a pain note rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. There is no second compile step for you.
 
-Those two files stay short. They hold the vision, the few rules that must always be on, and one line per decision still in force. Full writeups stay on disk under `.ax/`. The agent opens a decision file when the work depends on it.
+Those two files stay short. They hold the vision, the few rules that must always be on, and one sentence per decision still in force. That sentence is the decision, followed by the file path. The rest of the writeup stays under `.ax/decisions/`. The agent opens that file only when it needs more than the sentence.
 
 ## Install
 
@@ -22,12 +22,12 @@ On a normal Windows PC, open [the latest Release](https://github.com/briceduke/a
 ax install
 ```
 
-That writes one skill you invoke yourself:
+That writes two skills you invoke yourself:
 
-- Cursor: `~/.cursor/skills/ax/SKILL.md`
-- Claude Code: `~/.claude/skills/ax/SKILL.md`
+- `/ax` starts a project. Cursor: `~/.cursor/skills/ax/SKILL.md`. Claude Code: `~/.claude/skills/ax/SKILL.md`.
+- `/ax-migrate` updates an existing project's files to this ax. Cursor: `~/.cursor/skills/ax-migrate/SKILL.md`. Claude Code: `~/.claude/skills/ax-migrate/SKILL.md`.
 
-Both set `disable-model-invocation: true`. Nothing suggests ax until you type `/ax`. A folder you never typed `/ax` in stays alone.
+Both set `disable-model-invocation: true`. Nothing suggests them until you type `/ax` or `/ax-migrate`. A folder you never typed `/ax` in stays alone.
 
 ARM laptop: `windows_arm64`. Mac: `darwin_arm64` or `darwin_amd64`. Linux: `linux_amd64` or `linux_arm64`.
 
@@ -80,7 +80,7 @@ release-please opens a version PR that bumps `VERSION` and `internal/version/ver
 
 | Path | Meaning |
 | --- | --- |
-| `AGENTS.md`, `CLAUDE.md` | Short copies for the next chat. Vision, always-on rules, one line per decision in force. |
+| `AGENTS.md`, `CLAUDE.md` | Short copies for the next chat. Vision, always-on rules, one sentence per decision in force, plus the file path. |
 | `.ax/ax.yaml` | Which editors, which ax version, which packs, and whether notes are also in `record/`. |
 | `.ax/intent.md` | What this product is. |
 | `.ax/decisions/` | Choices. One file each. Never edited. |

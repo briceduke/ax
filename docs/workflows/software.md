@@ -142,7 +142,7 @@ You still do not edit `AGENTS.md` or `CLAUDE.md`. Those are copies. Saving a dec
 
 | File | What it is |
 | --- | --- |
-| `AGENTS.md` | Vision, always-on rules, one line per decision in force. Cursor reads this at the start of a chat. |
+| `AGENTS.md` | Vision, always-on rules, one sentence per decision in force, plus the file path. Cursor reads this at the start of a chat. |
 | `.cursor/hooks.json` | After a file save, Cursor runs `ax check --tier fast`. |
 | `.cursor/skills/{id}/SKILL.md` | Notes marked `hints: [user-invocable]`. |
 | `.cursor/agents/` | Only if a note is marked `hints: [isolation]`. |

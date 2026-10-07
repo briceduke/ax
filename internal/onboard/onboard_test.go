@@ -57,8 +57,11 @@ func TestInitCheckPasses(t *testing.T) {
 		if !strings.Contains(string(data), "own-the-harness") {
 			t.Fatalf("%s missing own-the-harness:\n%s", rel, data)
 		}
-		if !strings.Contains(string(data), "adopt ax for harness management") {
-			t.Fatalf("%s missing decision line:\n%s", rel, data)
+		if !strings.Contains(string(data), "Adopt ax.") {
+			t.Fatalf("%s missing decision sentence:\n%s", rel, data)
+		}
+		if !strings.Contains(string(data), ".ax/decisions/2026-10-04-adopt-ax-for-harness-management.md") {
+			t.Fatalf("%s missing decision path:\n%s", rel, data)
 		}
 		if strings.Contains(string(data), "Ad-hoc markdown rules") {
 			t.Fatalf("%s pasted a full decision writeup:\n%s", rel, data)
@@ -131,8 +134,8 @@ func TestLogDecisionRewritesAgents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "use bun") {
-		t.Fatalf("AGENTS.md missing new decision:\n%s", data)
+	if !strings.Contains(string(data), "bun.") || !strings.Contains(string(data), ".ax/decisions/") {
+		t.Fatalf("AGENTS.md missing choice sentence and path:\n%s", data)
 	}
 	if strings.Contains(string(data), "Runtime.") {
 		t.Fatalf("AGENTS.md pasted decision body:\n%s", data)
