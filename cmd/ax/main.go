@@ -459,7 +459,7 @@ func runInstall(args []string) error {
 	if err := install.WriteSkills(dir); err != nil {
 		return err
 	}
-	fmt.Println("wrote /ax skills")
+	fmt.Println("wrote /ax and /ax-migrate skills")
 	return nil
 }
 

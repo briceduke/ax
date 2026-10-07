@@ -319,7 +319,7 @@ The first session needs a recorded toolchain so later checks have a decision to 
 
 ## Choice
 
-Record disciplines: %s. Constraints: %s.
+Disciplines are %s and constraints are %s.
 
 ## Why
 
@@ -340,7 +340,7 @@ Process weight decides how much harness text the team will tolerate.
 
 ## Choice
 
-%s process weight. Team: %s.
+Process weight is %s for team %s.
 
 ## Why
 

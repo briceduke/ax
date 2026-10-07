@@ -22,7 +22,11 @@ type Assembler struct{}
 // Write emits adapter files named by spec. It does not invent extra tool paths.
 func (Assembler) Write(spec *targets.Spec, snap *Snapshot) ([]File, error) {
 	var files []File
-	files = append(files, instructionsFile(spec, snap))
+	instructions, err := instructionsFile(spec, snap)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, instructions)
 	for _, cap := range snap.Capabilities {
 		if core.HasHint(cap, core.HintInvocable) {
 			files = append(files, capabilityFile(spec.Invocable, cap))
@@ -40,7 +44,7 @@ func (Assembler) Write(spec *targets.Spec, snap *Snapshot) ([]File, error) {
 	return files, nil
 }
 
-func instructionsFile(spec *targets.Spec, snap *Snapshot) File {
+func instructionsFile(spec *targets.Spec, snap *Snapshot) (File, error) {
 	var b strings.Builder
 	b.WriteString(strings.TrimSpace(snap.Intent))
 	if b.Len() > 0 {
@@ -70,11 +74,15 @@ func instructionsFile(spec *targets.Spec, snap *Snapshot) File {
 	if len(snap.Decisions) > 0 {
 		b.WriteString("## Decisions in force\n\n")
 		for _, d := range snap.Decisions {
-			fmt.Fprintf(&b, "- %s (`.ax/decisions/%s.md`)\n", logbook.TitleFromID(d.ID), d.ID)
+			sentence, err := logbook.ChoiceSentence(d.Body)
+			if err != nil {
+				return File{}, fmt.Errorf("decision %s: %w", d.ID, err)
+			}
+			fmt.Fprintf(&b, "- %s (`.ax/decisions/%s.md`)\n", sentence, d.ID)
 		}
 		b.WriteString("\n")
 	}
-	return File{Rel: spec.Instructions, Data: []byte(strings.TrimSpace(b.String()) + "\n"), Landing: landing}
+	return File{Rel: spec.Instructions, Data: []byte(strings.TrimSpace(b.String()) + "\n"), Landing: landing}, nil
 }
 
 func capabilityFile(pattern string, cap *core.Capability) File {

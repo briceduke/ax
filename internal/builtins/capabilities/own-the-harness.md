@@ -8,11 +8,11 @@ You run ax. Do not ask the human to run commands.
 
 People talk. You save. The next chat already knows.
 
-AGENTS.md and CLAUDE.md stay short: the vision, the few rules that must always be on, and one line per decision still in force. Open a decision file when the work depends on it. Do not paste every writeup into the root files. Do not edit AGENTS.md or CLAUDE.md by hand.
+AGENTS.md and CLAUDE.md stay short: the vision, the few rules that must always be on, and one sentence per decision still in force. The sentence is the decision. The path beside it is the file. Open that file only when you need more than the sentence. Do not open every decision file. Do not log a decision for something the vision already says, or for a task you are about to do. Do not edit AGENTS.md or CLAUDE.md by hand.
 
 Edit `.ax/intent.md` for the vision, then run `ax compile`. Log the rest with these commands. Each one rewrites the root files before it returns. Do not ask the human to compile.
 
-- `ax log decision "<title>"` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. No pipe writes those headings empty.
+- `ax log decision "<title>"` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. ## Choice is one sentence. No pipe writes those headings empty.
 - `ax log observation "<finding>" --method "<how>"`
 - `ax log friction "<one line>"`
 

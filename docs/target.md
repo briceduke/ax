@@ -60,7 +60,7 @@ One file per note, named with a date and a short slug, so two people can add fil
 
 ## Generating editor files
 
-You save a vision, decision, measurement, or pain note. ax rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. Those files stay short: the vision, always-on rules, and one line per decision in force. Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools. The `.ax` record does not move.
+You save a vision, decision, measurement, or pain note. ax rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. Those files stay short: the vision, always-on rules, and one sentence per decision in force, plus the file path. Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools. The `.ax` record does not move.
 
 **Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, the check that catches a stale copy, `own-the-harness` in `AGENTS.md` / `CLAUDE.md`, user-invocable skills at `.cursor/skills/{id}/SKILL.md` and `.claude/skills/{id}/SKILL.md` (`log-friction`, `sync-harness`, `record-decision`), and optional tools.yaml compiled into `.cursor/mcp.json` / `.mcp.json`.
 
@@ -116,7 +116,7 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 | `ax init` | Start a new project (tests/scripts; `/ax` is how a person starts) | Built |
 | `ax adopt` | Add ax to a repo that already exists | Built |
 | `ax notes show\|hide` | Move the same notes into or out of `record/` | Built |
-| `ax install` | Write the `/ax` skill under a home directory | Built |
+| `ax install` | Write the `/ax` and `/ax-migrate` skills under a home directory | Built |
 | `ax eval` | Run the harness tests and log scores | Built (agent CLI if present; otherwise scripts run and rubrics skip) |
 | `ax ablate` | See if a temporary note is still needed | Built |
 | `ax retro` | Propose cuts and fixes from logged friction | Built (no auto-merge) |
