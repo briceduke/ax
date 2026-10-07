@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0](https://github.com/briceduke/ax/compare/v0.6.0...v0.7.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* ## Choice must be one sentence of at most 200 characters.
+
+### Features
+
+* show the decision sentence in AGENTS.md ([#16](https://github.com/briceduke/ax/issues/16)) ([32e0e42](https://github.com/briceduke/ax/commit/32e0e42828d5e1183a6ef4c28b9e7f1224216d55))
+
 ## [0.6.0](https://github.com/briceduke/ax/compare/v0.5.0...v0.6.0) (2026-10-05)
 
 
