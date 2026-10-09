@@ -87,6 +87,47 @@ func TestVersionPrintsConstWithoutRepo(t *testing.T) {
 	}
 }
 
+func TestHelpPrintsUsageAndDoesNotInit(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	for _, args := range [][]string{
+		{"help"},
+		{"init", "--help"},
+		{"init", "-h"},
+		{"doctor", "--help"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			stdout, stderr := capture(t, func() error {
+				return run(args)
+			})
+			if stderr != "" {
+				t.Fatalf("stderr = %q", stderr)
+			}
+			if !strings.Contains(stdout, "ax init") || !strings.Contains(stdout, "--name") {
+				t.Fatalf("stdout = %q", stdout)
+			}
+			if strings.Contains(stdout, "\n\tax init") {
+				t.Fatalf("init usage is tab-indented: %q", stdout)
+			}
+		})
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".ax")); !os.IsNotExist(err) {
+		t.Fatalf(".ax created: %v", err)
+	}
+}
+
+func TestHelpWordIsNotAFlag(t *testing.T) {
+	if helpRequested([]string{"log", "friction", "help"}) {
+		t.Fatal("positional help counted as a flag")
+	}
+	if helpRequested([]string{"init", "--name", "help"}) {
+		t.Fatal("name help counted as a flag")
+	}
+	if !helpRequested([]string{"help"}) || !helpRequested([]string{"init", "--help"}) {
+		t.Fatal("help request missed")
+	}
+}
+
 func TestLogHelpPrintsDecisionStdin(t *testing.T) {
 	t.Chdir(t.TempDir())
 	stdout, stderr := capture(t, func() error {
