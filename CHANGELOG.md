@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/briceduke/ax/compare/v0.7.0...v0.7.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* print usage when help is requested ([#18](https://github.com/briceduke/ax/issues/18)) ([e8c35d9](https://github.com/briceduke/ax/commit/e8c35d95fd4d38df562a3b7d82ebd51893a494d3))
+
 ## [0.7.0](https://github.com/briceduke/ax/compare/v0.6.0...v0.7.0) (2026-10-07)
 
 
