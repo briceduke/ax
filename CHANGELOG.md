@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/briceduke/ax/compare/v0.7.1...v0.8.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* ## Choice must be one sentence of at most 200 characters.
+
+### Features
+
+* pin how-we-work decisions on save ([#20](https://github.com/briceduke/ax/issues/20)) ([0ceac7d](https://github.com/briceduke/ax/commit/0ceac7d438d5c3d5e4492e1fadd036d7934ebda7))
+
 ## [0.7.1](https://github.com/briceduke/ax/compare/v0.7.0...v0.7.1) (2026-10-09)
 
 
