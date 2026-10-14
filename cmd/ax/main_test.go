@@ -79,8 +79,8 @@ func TestVersionPrintsConstWithoutRepo(t *testing.T) {
 	if !strings.Contains(usage(), "ax version") {
 		t.Fatal("usage missing ax version")
 	}
-	if !strings.Contains(usage(), "ax install") || !strings.Contains(usage(), "ax notes") {
-		t.Fatal("usage missing install/notes")
+	if !strings.Contains(usage(), "ax install") || !strings.Contains(usage(), "ax notes") || !strings.Contains(usage(), "ax help") {
+		t.Fatal("usage missing install/notes/help")
 	}
 	if !strings.Contains(usage(), "Markdown on stdin") {
 		t.Fatal("usage missing decision stdin contract")
@@ -89,14 +89,112 @@ func TestVersionPrintsConstWithoutRepo(t *testing.T) {
 
 func TestLogHelpPrintsDecisionStdin(t *testing.T) {
 	t.Chdir(t.TempDir())
+	for _, args := range [][]string{
+		{"log", "--help"},
+		{"log", "-h"},
+		{"help", "log"},
+		{"log", "friction", "help"},
+		{"log", "decision", "-h"},
+		{"init", "--help"},
+		{"notes", "--help"},
+		{"help"},
+	} {
+		stdout, stderr := capture(t, func() error {
+			return run(args)
+		})
+		if stderr != "" {
+			t.Fatalf("%v stderr = %q", args, stderr)
+		}
+		if !strings.Contains(stdout, "Usage:") {
+			t.Fatalf("%v stdout = %q", args, stdout)
+		}
+	}
+}
+
+func TestNotesWithoutArgsPrintsStatus(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
 	stdout, stderr := capture(t, func() error {
-		return run([]string{"log", "--help"})
+		return run([]string{"init", "--name", "widget", "--intent", "A small test product."})
 	})
-	if stderr != "" {
+	if stderr != "" && !strings.HasPrefix(stderr, "warning:") {
+		t.Fatalf("init stderr = %q", stderr)
+	}
+	if !strings.Contains(stdout, "initialized") {
+		t.Fatalf("init stdout = %q", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(root, "record")); !os.IsNotExist(err) {
+		t.Fatal("init should not create record/")
+	}
+	stdout, stderr = capture(t, func() error {
+		return run([]string{"notes"})
+	})
+	if stderr != "" && !strings.HasPrefix(stderr, "warning:") {
+		t.Fatalf("notes stderr = %q", stderr)
+	}
+	if stdout != "notes: hidden\n" {
+		t.Fatalf("notes stdout = %q", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(root, "record")); !os.IsNotExist(err) {
+		t.Fatal("ax notes must not turn record/ on")
+	}
+	stdout, stderr = capture(t, func() error {
+		return run([]string{"notes", "show"})
+	})
+	if stderr != "" && !strings.HasPrefix(stderr, "warning:") {
+		t.Fatalf("show stderr = %q", stderr)
+	}
+	if stdout != "notes: record\n" {
+		t.Fatalf("show stdout = %q", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(root, "record", "intent.md")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLogDecisionPinsAlwaysOnAndCheck(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+	capture(t, func() error {
+		return run([]string{"init", "--name", "widget", "--intent", "A small test product."})
+	})
+	body := "## Context\n\nCommits.\n\n## Options\n\n- freeform\n- conventional\n\n## Choice\n\nCommit messages use Conventional Commits.\n\n## Why\n\nHistory stays readable.\n"
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldIn := os.Stdin
+	os.Stdin = r
+	go func() {
+		_, _ = w.Write([]byte(body))
+		w.Close()
+	}()
+	stdout, stderr := capture(t, func() error {
+		return run([]string{"log", "decision", "use conventional commit messages", "--always-on", "--when", "you write a commit message", "--check", "conventional-commits"})
+	})
+	os.Stdin = oldIn
+	if stderr != "" && !strings.HasPrefix(stderr, "warning:") {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	if !strings.Contains(stdout, "Markdown on stdin: ## Context") {
+	if !strings.Contains(stdout, ".ax/decisions/") || !strings.Contains(stdout, ".ax/capabilities/use-conventional-commit-messages.md") {
 		t.Fatalf("stdout = %q", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".ax", "capabilities", "use-conventional-commit-messages.md")); err != nil {
+		t.Fatal(err)
+	}
+	checksYAML, err := os.ReadFile(filepath.Join(root, ".ax", "checks.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(checksYAML), "builtin: conventional-commits") {
+		t.Fatalf("checks.yaml = %s", checksYAML)
+	}
+	agents, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(agents), "### use-conventional-commit-messages") {
+		t.Fatalf("AGENTS.md missing always-on note:\n%s", agents)
 	}
 }
 

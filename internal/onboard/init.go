@@ -99,7 +99,7 @@ func Init(root string, opts InitOptions, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if opts.Interview || opts.IsTTY {
+	if shouldInterview(opts) {
 		if _, err := logbook.WriteDecision(root, "choose the product toolchain", "", toolchainBody(opts), opts.Now); err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func fillInit(opts *InitOptions) error {
 		opts.Targets = "cursor,claude-code"
 	}
 	opts.Notes = normalizeNotes(opts.Notes)
-	interactive := opts.Interview || opts.IsTTY
+	interactive := shouldInterview(*opts)
 	if !interactive {
 		if opts.Name == "" || opts.Intent == "" {
 			return fmt.Errorf("ax init requires --name and --intent when stdin is not a terminal")
@@ -218,7 +218,7 @@ func intentDoc(opts InitOptions) string {
 	constraints := orDefault(opts.Constraints, "none recorded")
 	team := orDefault(opts.Team, "unspecified")
 	weight := orDefault(opts.ProcessWeight, "Low")
-	if opts.Interview || opts.IsTTY {
+	if shouldInterview(opts) {
 		return fmt.Sprintf(`# Intent
 
 ## What is being built
@@ -276,6 +276,16 @@ Short files.
 
 %s
 `, strings.TrimSpace(opts.Intent), forWhom, weight)
+}
+
+func shouldInterview(opts InitOptions) bool {
+	if opts.Interview {
+		return true
+	}
+	if !opts.IsTTY {
+		return false
+	}
+	return strings.TrimSpace(opts.Name) == "" || strings.TrimSpace(opts.Intent) == ""
 }
 
 func orDefault(v, fallback string) string {

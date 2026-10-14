@@ -60,7 +60,7 @@ One file per note, named with a date and a short slug, so two people can add fil
 
 ## Generating editor files
 
-You save a vision, decision, measurement, or pain note. ax rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. Those files stay short: the vision, always-on rules, and one sentence per decision in force, plus the file path. Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools. The `.ax` record does not move.
+You save a vision, decision, measurement, or pain note. ax rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. Those files stay short: the vision, always-on rules, one sentence per decision in force, and the three newest findings, plus file paths. Supporting a new editor should mean adding one short description of where that editor keeps instructions, skills, hooks, and tools. The `.ax` record does not move.
 
 **Built:** Cursor and Claude Code, skip-if-unchanged, “don’t edit this” headers, the check that catches a stale copy, `own-the-harness` in `AGENTS.md` / `CLAUDE.md`, user-invocable skills at `.cursor/skills/{id}/SKILL.md` and `.claude/skills/{id}/SKILL.md` (`log-friction`, `sync-harness`, `record-decision`), and optional tools.yaml compiled into `.cursor/mcp.json` / `.mcp.json`.
 
@@ -68,7 +68,7 @@ You save a vision, decision, measurement, or pain note. ax rewrites `AGENTS.md` 
 
 ## Checks
 
-`ax check` runs the tests listed in the project. A failure should point at the decision that made the rule, so you can see *why*, not only *what*.
+`ax check` runs the tests listed in the project. A failure should point at the decision that made the rule, so you can see *why*, not only *what*. Logging a how-we-work choice with `--always-on` and `--check` writes that note and check in the same save.
 
 **Built:** fast / full / slow, skip unchanged inputs, your own commands, and the built-in tests (shape of files including evals, links that exist, generated files match).
 
@@ -110,12 +110,14 @@ Fixes land in one product, get cleaned of private detail, and come back as files
 
 | Command | What it is for | Status |
 | --- | --- | --- |
-| `ax log …` | Write a decision, observation, or friction note (rewrites root files) | Built |
+| `ax log …` | Write a decision, observation, or friction note (rewrites root files; decision can pin `--always-on` and `--check`) | Built |
 | `ax check` | Run the project’s tests | Built |
 | `ax compile` | Refresh editor files after a hand-edit or a new target | Built (assembler default; optional agent) |
 | `ax init` | Start a new project (tests/scripts; `/ax` is how a person starts) | Built |
 | `ax adopt` | Add ax to a repo that already exists | Built |
+| `ax notes` | Print whether `record/` is on | Built |
 | `ax notes show\|hide` | Move the same notes into or out of `record/` | Built |
+| `ax help [command]` | Print usage | Built |
 | `ax install` | Write the `/ax` and `/ax-migrate` skills under a home directory | Built |
 | `ax eval` | Run the harness tests and log scores | Built (agent CLI if present; otherwise scripts run and rubrics skip) |
 | `ax ablate` | See if a temporary note is still needed | Built |

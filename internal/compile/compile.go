@@ -47,6 +47,7 @@ type Snapshot struct {
 	Capabilities []*core.Capability
 	Scaffolds    []*core.Scaffold
 	Decisions    []*logbook.Decision
+	Observations []*logbook.Observation
 	Tools        []core.Tool
 	Hash         string
 	Version      string
@@ -153,6 +154,10 @@ func loadSnapshot(root, hash string) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	observations, err := logbook.LoadObservations(root)
+	if err != nil {
+		return nil, err
+	}
 	tools, err := core.LoadTools(root)
 	if err != nil {
 		return nil, err
@@ -162,6 +167,7 @@ func loadSnapshot(root, hash string) (*Snapshot, error) {
 		Capabilities: caps,
 		Scaffolds:    scaffolds,
 		Decisions:    logbook.InForce(decisions),
+		Observations: logbook.RecentObservations(observations, 3),
 		Tools:        tools,
 		Hash:         hash,
 		Version:      version.Version,

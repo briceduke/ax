@@ -12,14 +12,13 @@ AGENTS.md and CLAUDE.md stay short: the vision, the few rules that must always b
 
 Edit `.ax/intent.md` for the vision, then run `ax compile`. Log the rest with these commands. Each one rewrites the root files before it returns. Do not ask the human to compile.
 
-- `ax log decision "<title>"` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. ## Choice is one sentence. No pipe writes those headings empty.
-- `ax log observation "<finding>" --method "<how>"`
+- `ax log decision "<title>"` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. ## Choice is one sentence. No pipe writes those headings empty. If the choice is how people or agents work, pass `--always-on --when "<when>"`. If a machine can test it, pass `--check "<command or builtin>"`. Do not ask first.
+- `ax log observation "<finding>" --method "<how>"`. Recent findings land in the root files.
 - `ax log friction "<one line>"`
 
 Offer the rest in chat. They say yes or no:
 
 - A check failed: say so.
-- They want a rule to stick: write the decision and a check that points at it.
 - The same pain repeats: suggest a rule, or a short scored task.
 - A reminder looks outdated: ask to drop it.
 - The next project should work the same way: copy the useful part.

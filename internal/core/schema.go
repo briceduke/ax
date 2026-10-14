@@ -134,6 +134,29 @@ func LoadCapabilities(root string) ([]*Capability, error) {
 	return out, nil
 }
 
+// WriteCapability writes a how-we-work note under .ax/capabilities/.
+func WriteCapability(root string, cap *Capability) (string, error) {
+	if err := validateCapability(cap); err != nil {
+		return "", err
+	}
+	rel := project.Rel("capabilities", cap.ID+".md")
+	path := filepath.Join(root, filepath.FromSlash(rel))
+	if _, err := os.Stat(path); err == nil {
+		return "", fmt.Errorf("%s already exists", rel)
+	} else if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return "", err
+	}
+	body := strings.TrimSpace(cap.Body)
+	content := fmt.Sprintf("---\nid: %s\nkind: capability\nwhen: %s\n---\n\n%s\n", cap.ID, cap.When, body)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return "", err
+	}
+	return rel, nil
+}
+
 // LoadScaffolds parses scaffold files, omitting ids in without.
 func LoadScaffolds(root string, without []string) ([]*Scaffold, error) {
 	rels, err := ListMarkdown(root, project.Rel("scaffolds"))

@@ -22,8 +22,8 @@ func TestWriteSkillsUsesGivenHome(t *testing.T) {
 			t.Fatalf("%s missing disable-model-invocation:\n%s", skill.rel, text)
 		}
 		if strings.Contains(skill.rel, "/ax/SKILL.md") {
-			if !strings.Contains(text, "ax init") || !strings.Contains(text, "ax adopt") {
-				t.Fatalf("%s missing init/adopt:\n%s", skill.rel, text)
+			if !strings.Contains(text, "ax init") || !strings.Contains(text, "ax adopt") || !strings.Contains(text, "ax notes") {
+				t.Fatalf("%s missing init/adopt/notes:\n%s", skill.rel, text)
 			}
 		}
 		if strings.Contains(skill.rel, "ax-migrate") {

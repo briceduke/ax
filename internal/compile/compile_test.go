@@ -7,12 +7,52 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/core"
+	"github.com/briceduke/ax/internal/logbook"
 	"github.com/briceduke/ax/internal/version"
 	"github.com/briceduke/ax/targets"
 )
+
+func TestRecentFindingsLandInAgents(t *testing.T) {
+	root := writeCompileProject(t)
+	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	if _, err := logbook.WriteObservation(root, "old finding", "bench", now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := logbook.WriteObservation(root, "middle finding", "bench", now.Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := logbook.WriteObservation(root, "newer finding", "bench", now.Add(48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := logbook.WriteObservation(root, "newest finding", "bench", now.Add(72*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Run(root, Options{}, &buf); err != nil {
+		t.Fatalf("compile: %v\n%s", err, buf.String())
+	}
+	data, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if !strings.Contains(text, "## Recent findings") {
+		t.Fatalf("AGENTS.md missing recent findings:\n%s", text)
+	}
+	if !strings.Contains(text, "newest finding") || !strings.Contains(text, "newer finding") || !strings.Contains(text, "middle finding") {
+		t.Fatalf("AGENTS.md missing newest findings:\n%s", text)
+	}
+	if strings.Contains(text, "old finding") {
+		t.Fatalf("AGENTS.md kept a fourth finding:\n%s", text)
+	}
+	if !strings.Contains(text, ".ax/observations/") {
+		t.Fatalf("AGENTS.md missing observation path:\n%s", text)
+	}
+}
 
 func TestSkipWhenHashMatches(t *testing.T) {
 	root := writeCompileProject(t)
@@ -249,6 +289,7 @@ func TestBuiltinRecordDecisionLands(t *testing.T) {
 	wantBody := map[string]string{
 		"record-decision": "ax log decision",
 		"log-friction":    "ax log friction",
+		"log-observation": "ax log observation",
 		"sync-harness":    "ax compile",
 	}
 	for id, needle := range wantBody {
@@ -267,8 +308,8 @@ func TestBuiltinRecordDecisionLands(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Contains(data, []byte("enforces:")) {
-			t.Fatalf("%s missing check prompt:\n%s", rel, data)
+		if !bytes.Contains(data, []byte("--always-on")) || !bytes.Contains(data, []byte("--check")) {
+			t.Fatalf("%s missing pin flags:\n%s", rel, data)
 		}
 	}
 	for _, rel := range []string{"AGENTS.md", "CLAUDE.md"} {
@@ -322,6 +363,7 @@ func assertAdapters(t *testing.T, root string) {
 	}
 	mustExist = append(mustExist, skillRels("record-decision")...)
 	mustExist = append(mustExist, skillRels("log-friction")...)
+	mustExist = append(mustExist, skillRels("log-observation")...)
 	mustExist = append(mustExist, skillRels("sync-harness")...)
 	for _, rel := range mustExist {
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel))); err != nil {

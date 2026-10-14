@@ -3,6 +3,7 @@ package checks
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -298,6 +299,71 @@ func TestStaleness(t *testing.T) {
 	err = checkStaleness(root)
 	if err == nil || !strings.Contains(err.Error(), "run ax compile") {
 		t.Fatalf("error = %v, want run ax compile for missing target", err)
+	}
+}
+
+func TestAppendCheck(t *testing.T) {
+	root := t.TempDir()
+	writeBuiltinProject(t, root, []string{})
+	err := Append(root, Check{
+		ID:       "conventional-commits",
+		Builtin:  "conventional-commits",
+		Inputs:   []string{},
+		Tier:     TierFast,
+		Enforces: ".ax/decisions/2026-10-13-use-conventional-commit-messages.md",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, err := LoadRegistry(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 1 || all[0].ID != "conventional-commits" || all[0].Builtin != "conventional-commits" {
+		t.Fatalf("registry = %#v", all)
+	}
+	if err := Append(root, Check{ID: "conventional-commits", Builtin: "conventional-commits", Tier: TierFast}); err == nil {
+		t.Fatal("expected duplicate error")
+	}
+}
+
+func TestConventionalCommitsBuiltin(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not on PATH")
+	}
+	root := t.TempDir()
+	runGit(t, root, "init")
+	runGit(t, root, "config", "user.email", "ax@example.com")
+	runGit(t, root, "config", "user.name", "ax")
+	if err := checkConventionalCommits(root); err != nil {
+		t.Fatalf("empty repo: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "a.txt"), []byte("a\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "add", "a.txt")
+	runGit(t, root, "commit", "-m", "added a file")
+	err := checkConventionalCommits(root)
+	if err == nil || !strings.Contains(err.Error(), "not conventional") {
+		t.Fatalf("error = %v", err)
+	}
+	runGit(t, root, "commit", "--allow-empty", "-m", "feat: add a file")
+	if err := checkConventionalCommits(root); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	if len(args) > 0 && args[0] == "commit" {
+		args = append(args, "--no-gpg-sign")
+	}
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_AUTHOR_DATE=2026-10-13T00:00:00Z", "GIT_COMMITTER_DATE=2026-10-13T00:00:00Z")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}
 }
 

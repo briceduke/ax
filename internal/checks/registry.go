@@ -1,10 +1,12 @@
 package checks
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/briceduke/ax/internal/core"
@@ -69,6 +71,78 @@ func validateCheck(c *Check) error {
 		c.Inputs = []string{}
 	}
 	return nil
+}
+
+var knownBuiltins = map[string]bool{
+	"ax-format":            true,
+	"ax-consistency":       true,
+	"ax-staleness":         true,
+	"conventional-commits": true,
+}
+
+// IsBuiltin reports whether name is a built-in check.
+func IsBuiltin(name string) bool {
+	return knownBuiltins[name]
+}
+
+// Append adds one check to .ax/checks.yaml.
+func Append(root string, c Check) error {
+	if c.Inputs == nil {
+		c.Inputs = []string{}
+	}
+	if c.Tier == "" {
+		c.Tier = TierFast
+	}
+	all, err := LoadRegistry(root)
+	if err != nil {
+		return err
+	}
+	for _, existing := range all {
+		if existing.ID == c.ID {
+			return fmt.Errorf("check %s already exists", c.ID)
+		}
+	}
+	if err := validateCheck(&c); err != nil {
+		return err
+	}
+	path := project.Join(root, "checks.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", project.Rel("checks.yaml"), err)
+	}
+	data = bytes.TrimSpace(data)
+	if string(data) == "[]" {
+		data = nil
+	}
+	if len(data) > 0 && data[len(data)-1] != '\n' {
+		data = append(data, '\n')
+	}
+	data = append(data, []byte(formatCheck(c))...)
+	return os.WriteFile(path, data, 0644)
+}
+
+func formatCheck(c Check) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "- id: %s\n", c.ID)
+	if c.Builtin != "" {
+		fmt.Fprintf(&b, "  builtin: %s\n", c.Builtin)
+	}
+	if c.Run != "" {
+		fmt.Fprintf(&b, "  run: %q\n", c.Run)
+	}
+	if len(c.Inputs) == 0 {
+		b.WriteString("  inputs: []\n")
+	} else {
+		b.WriteString("  inputs:\n")
+		for _, in := range c.Inputs {
+			fmt.Fprintf(&b, "    - %s\n", in)
+		}
+	}
+	fmt.Fprintf(&b, "  tier: %s\n", c.Tier)
+	if c.Enforces != "" {
+		fmt.Fprintf(&b, "  enforces: %s\n", c.Enforces)
+	}
+	return b.String()
 }
 
 // Select returns checks at or below the requested tier. Tiers are cumulative.

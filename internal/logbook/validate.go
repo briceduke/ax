@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -217,6 +218,21 @@ func LoadObservations(root string) ([]*Observation, error) {
 		out = append(out, o)
 	}
 	return out, nil
+}
+
+// RecentObservations returns the newest n observations, newest first.
+func RecentObservations(all []*Observation, n int) []*Observation {
+	if n <= 0 || len(all) == 0 {
+		return nil
+	}
+	out := append([]*Observation(nil), all...)
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].ID > out[j].ID
+	})
+	if len(out) > n {
+		out = out[:n]
+	}
+	return out
 }
 
 func checkIdentity(id, kind, date, wantKind, filenameID string, lines, maxLines int) error {

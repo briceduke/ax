@@ -20,8 +20,8 @@ const skillBody = "---\n" +
 	"1. Ask what they are making.\n" +
 	"2. Ask who it is for.\n" +
 	"3. Ask whether the notes are the work (hardware, research) or the code is the work (software).\n" +
-	"4. If the folder already has product code, run `ax adopt`. Otherwise run `ax init --name \"<name>\" --intent \"<one line>\"`. Add `--notes record` when the notes are the work.\n" +
-	"5. Saving writes `AGENTS.md` and `CLAUDE.md` before the command returns. The next chat already has the vision.\n\n" +
+	"4. If the folder already has product code, run `ax adopt`. Otherwise run `ax init --name \"<name>\" --intent \"<one line>\"`. Add `--notes record` when the notes are the work. Do not add `--interview` after you already asked in chat.\n" +
+	"5. Saving writes `AGENTS.md` and `CLAUDE.md` before the command returns. The next chat already has the vision. `ax notes` prints whether record/ is on. Do not run `ax notes show` to inspect; that turns the copy on.\n\n" +
 	"If `.ax` already exists, say so. Ordinary chat uses `AGENTS.md` or `CLAUDE.md`. They do not need /ax again for ordinary work.\n"
 
 var skillFiles = []struct {
