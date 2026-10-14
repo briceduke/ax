@@ -42,6 +42,32 @@ func TestContentHashNormalizesCRLF(t *testing.T) {
 	}
 }
 
+func TestWriteCapability(t *testing.T) {
+	root := t.TempDir()
+	rel, err := WriteCapability(root, &Capability{
+		ID:   "conventional-commits",
+		Kind: "capability",
+		When: "you write a commit message",
+		Body: "Commit messages use Conventional Commits.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rel != ".ax/capabilities/conventional-commits.md" {
+		t.Fatalf("rel = %s", rel)
+	}
+	got, err := ParseCapability(filepath.Join(root, filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.When != "you write a commit message" || !strings.Contains(got.Body, "Conventional Commits") {
+		t.Fatalf("capability = %#v", got)
+	}
+	if _, err := WriteCapability(root, &Capability{ID: "conventional-commits", Kind: "capability", When: "again", Body: "no"}); err == nil {
+		t.Fatal("expected overwrite error")
+	}
+}
+
 func TestParseCapabilityAndScaffold(t *testing.T) {
 	root := t.TempDir()
 	capPath := filepath.Join(root, "cap.md")

@@ -13,6 +13,7 @@ import (
 	"github.com/briceduke/ax/internal/agent"
 	"github.com/briceduke/ax/internal/checks"
 	"github.com/briceduke/ax/internal/compile"
+	"github.com/briceduke/ax/internal/core"
 	"github.com/briceduke/ax/internal/eval"
 	"github.com/briceduke/ax/internal/install"
 	"github.com/briceduke/ax/internal/logbook"
@@ -36,9 +37,8 @@ func run(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("%s", usage())
 	}
-	if helpRequested(args) {
-		fmt.Print(usage())
-		return nil
+	if args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
+		return runHelp(args[1:])
 	}
 	switch args[0] {
 	case "log":
@@ -94,11 +94,12 @@ Usage:
   ax pack bootstrap <discipline>
   ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--notes record] [--interview]
   ax adopt
+  ax notes
   ax notes show|hide
+  ax help [command]
   ax install [--home <dir>]
   ax doctor [--require-container]
   ax version
-  ax help
 `) + "\n"
 }
 
@@ -125,8 +126,9 @@ func isHelpFlag(arg string) bool {
 
 const logCommands = `  ax log friction <one-line>
   ax log observation <finding> --method <how>
-  ax log decision <title> [--supersedes <id>]
-      Markdown on stdin: ## Context, ## Options, ## Choice, ## Why. No pipe writes those headings empty.`
+  ax log decision <title> [--supersedes <id>] [--always-on] [--when <when>] [--check <run-or-builtin>]
+      Markdown on stdin: ## Context, ## Options, ## Choice, ## Why. No pipe writes those headings empty.
+      --always-on writes a how-we-work note from ## Choice. --check adds a check that enforces the decision.`
 
 func logUsage() string {
 	return "Usage:\n" + logCommands + "\n"
@@ -153,7 +155,7 @@ func runLog(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("%s", strings.TrimRight(logUsage(), "\n"))
 	}
-	if args[0] == "--help" || args[0] == "-h" {
+	if isHelpArg(args[0]) || wantsHelp(args[1:]) || (len(args) == 2 && args[1] == "help") {
 		fmt.Print(logUsage())
 		return nil
 	}
@@ -178,7 +180,26 @@ func runLog(args []string) error {
 		if errRead != nil {
 			return errRead
 		}
-		path, err = logbook.WriteDecision(root, strings.Join(pos, " "), flags["supersedes"], body, now)
+		title := strings.Join(pos, " ")
+		if err := validateDecisionPins(body, flags); err != nil {
+			return err
+		}
+		path, err = logbook.WriteDecision(root, title, flags["supersedes"], body, now)
+		if err != nil {
+			return err
+		}
+		extra, errPin := pinDecision(root, path, title, body, flags)
+		if errPin != nil {
+			return errPin
+		}
+		if err := compile.Refresh(root); err != nil {
+			return err
+		}
+		fmt.Println(path)
+		for _, rel := range extra {
+			fmt.Println(rel)
+		}
+		return nil
 	default:
 		return fmt.Errorf("unknown log kind %q\n%s", kind, strings.TrimRight(logUsage(), "\n"))
 	}
@@ -192,7 +213,70 @@ func runLog(args []string) error {
 	return nil
 }
 
+func validateDecisionPins(body string, flags map[string]string) error {
+	if flags["always-on"] == "" && flags["check"] == "" {
+		return nil
+	}
+	if _, err := logbook.ChoiceSentence(body); err != nil {
+		return fmt.Errorf("decision extras need a one-sentence ## Choice: %w", err)
+	}
+	return nil
+}
+
+func pinDecision(root, decisionRel, title, body string, flags map[string]string) ([]string, error) {
+	var written []string
+	if flags["always-on"] != "" {
+		rel, err := writeDecisionCapability(root, title, body, flags["when"])
+		if err != nil {
+			return nil, err
+		}
+		written = append(written, rel)
+	}
+	if flags["check"] != "" {
+		if err := writeDecisionCheck(root, title, decisionRel, flags["check"]); err != nil {
+			return nil, err
+		}
+	}
+	return written, nil
+}
+
+func writeDecisionCapability(root, title, body, when string) (string, error) {
+	choice, err := logbook.ChoiceSentence(body)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(when) == "" {
+		when = "this choice still applies"
+	}
+	return core.WriteCapability(root, &core.Capability{
+		ID:   logbook.Slugify(title),
+		Kind: "capability",
+		When: when,
+		Body: choice,
+	})
+}
+
+func writeDecisionCheck(root, title, decisionRel, spec string) error {
+	c := checks.Check{
+		ID:       logbook.Slugify(title),
+		Inputs:   []string{},
+		Tier:     checks.TierFast,
+		Enforces: decisionRel,
+	}
+	if checks.IsBuiltin(spec) {
+		c.ID = spec
+		c.Builtin = spec
+	} else {
+		c.Run = spec
+	}
+	return checks.Append(root, c)
+}
+
 func runCheck(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	pos, flags, err := partition(args)
 	if err != nil {
 		return err
@@ -213,6 +297,10 @@ func runCheck(args []string) error {
 }
 
 func runCompile(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	pos, flags, err := partition(args)
 	if err != nil {
 		return err
@@ -237,10 +325,14 @@ func runCompile(args []string) error {
 }
 
 func runEval(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	fs := newFlagSet("eval")
 	without := fs.String("without", "", "compile without this scaffold first")
 	runs := fs.Int("runs", 0, "override eval run count")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	root, _, err := loadRoot()
@@ -269,7 +361,11 @@ func runEval(args []string) error {
 
 func runRetro(args []string) error {
 	fs := newFlagSet("retro")
-	if err := fs.Parse(args); err != nil {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	root, _, err := loadRoot()
@@ -281,8 +377,12 @@ func runRetro(args []string) error {
 }
 
 func runAblate(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	fs := newFlagSet("ablate")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	root, _, err := loadRoot()
@@ -299,7 +399,11 @@ func runProposeUpstream(args []string) error {
 	change := fs.String("change", "", "proposed change")
 	helps := fs.Bool("helps-others", false, "would this help another project")
 	submit := fs.Bool("submit", false, "create a GitHub issue with gh (does not merge)")
-	if err := fs.Parse(args); err != nil {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	root, _, err := loadRoot()
@@ -327,7 +431,11 @@ func runUpgrade(args []string) error {
 	from := fs.String("from", "", "local machinery directory with a VERSION file")
 	submit := fs.Bool("submit", false, "file a GitHub issue with gh (does not merge)")
 	skipBinary := fs.Bool("skip-binary", false, "do not replace this ax executable")
-	if err := fs.Parse(args); err != nil {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	opts := upgrade.Options{From: *from, Submit: *submit, SkipBinary: *skipBinary}
@@ -359,6 +467,10 @@ func runUpgrade(args []string) error {
 }
 
 func runPack(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	if len(args) == 0 {
 		return fmt.Errorf("usage: ax pack add|extract|bootstrap ...")
 	}
@@ -379,7 +491,7 @@ func runPack(args []string) error {
 		var replacements stringMap
 		fs.Var(&files, "file", "project file to include (repeatable)")
 		fs.Var(&replacements, "replace", "old=PARAM (repeatable)")
-		if err := fs.Parse(args[1:]); err != nil {
+		if err := parseFlags(fs, args[1:]); err != nil {
 			return err
 		}
 		if fs.NArg() != 1 {
@@ -405,13 +517,17 @@ func runPack(args []string) error {
 }
 
 func runInit(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(initUsage())
+		return nil
+	}
 	fs := newFlagSet("init")
 	name := fs.String("name", "", "project name")
 	intent := fs.String("intent", "", "what is being built")
 	targets := fs.String("targets", "cursor,claude-code", "comma-separated editor targets")
 	notes := fs.String("notes", "", "record if the notes are the work")
 	interview := fs.Bool("interview", false, "ask the full start questions")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	cwd, err := os.Getwd()
@@ -430,8 +546,12 @@ func runInit(args []string) error {
 }
 
 func runAdopt(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	fs := newFlagSet("adopt")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	cwd, err := os.Getwd()
@@ -442,12 +562,20 @@ func runAdopt(args []string) error {
 }
 
 func runNotes(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: ax notes show|hide")
+	if wantsHelp(args) {
+		fmt.Print(notesUsage())
+		return nil
 	}
-	root, _, err := loadRoot()
+	root, cfg, err := loadRoot()
 	if err != nil {
 		return err
+	}
+	if len(args) == 0 {
+		fmt.Println(notesStatus(cfg))
+		return nil
+	}
+	if len(args) != 1 {
+		return fmt.Errorf("%s", strings.TrimRight(notesUsage(), "\n"))
 	}
 	switch args[0] {
 	case "show":
@@ -459,15 +587,27 @@ func runNotes(args []string) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("usage: ax notes show|hide")
+		return fmt.Errorf("%s", strings.TrimRight(notesUsage(), "\n"))
 	}
-	return compile.Refresh(root)
+	if err := compile.Refresh(root); err != nil {
+		return err
+	}
+	cfg, err = project.Load(root)
+	if err != nil {
+		return err
+	}
+	fmt.Println(notesStatus(cfg))
+	return nil
 }
 
 func runInstall(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	fs := newFlagSet("install")
 	home := fs.String("home", "", "directory that contains .cursor and .claude")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	dir := *home
@@ -491,9 +631,13 @@ func runVersion() error {
 }
 
 func runDoctor(args []string) error {
+	if wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
 	fs := newFlagSet("doctor")
 	requireContainer := fs.Bool("require-container", false, "fail if Docker cannot build and run ax check")
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	root, _, err := loadRoot()
@@ -505,6 +649,62 @@ func runDoctor(args []string) error {
 
 func ghCommand(args ...string) (string, error) {
 	return agent.SystemRun("", "gh", args...)
+}
+
+func runHelp(args []string) error {
+	if len(args) == 0 || wantsHelp(args) {
+		fmt.Print(usage())
+		return nil
+	}
+	switch args[0] {
+	case "log":
+		fmt.Print(logUsage())
+	case "init":
+		fmt.Print(initUsage())
+	case "notes":
+		fmt.Print(notesUsage())
+	default:
+		fmt.Print(usage())
+	}
+	return nil
+}
+
+func initUsage() string {
+	return "Usage:\n  ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--notes record] [--interview]\n"
+}
+
+func notesUsage() string {
+	return "Usage:\n  ax notes\n  ax notes show|hide\n\n  ax notes        print whether record/ is on\n  ax notes show   publish notes into record/\n  ax notes hide   keep notes only under .ax/\n"
+}
+
+func notesStatus(cfg *project.Config) string {
+	if project.NotesVisible(cfg) {
+		return "notes: record"
+	}
+	return "notes: hidden"
+}
+
+func isHelpArg(s string) bool {
+	return s == "--help" || s == "-h" || s == "help"
+}
+
+func wantsHelp(args []string) bool {
+	for _, a := range args {
+		if a == "--help" || a == "-h" || a == "-help" {
+			return true
+		}
+	}
+	return false
+}
+
+func parseFlags(fs *flag.FlagSet, args []string) error {
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func newFlagSet(name string) *flag.FlagSet {
@@ -554,8 +754,8 @@ func partition(args []string) ([]string, map[string]string, error) {
 			continue
 		}
 		name := strings.TrimPrefix(a, "--")
-		if name == "all" && !strings.Contains(name, "=") {
-			flags["all"] = "true"
+		if (name == "all" || name == "always-on") && !strings.Contains(name, "=") {
+			flags[name] = "true"
 			continue
 		}
 		value := ""

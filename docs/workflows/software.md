@@ -99,7 +99,7 @@ You do not want this again. You also do not want a merge that was never tested. 
 
 The agent fills Context, Options, Choice, Why on each. For the first: keep the built-in CSV tools, or add a package only after a person says yes. For the second: a report that was never run against a known file is not done.
 
-A rule a machine can test should not stay a paragraph. In the same change, the agent adds checks to `.ax/checks.yaml`. Point `enforces:` at the decision each check is keeping honest. When a check fails, ax prints that decision’s Why. Hooks already run checks after edits. If one fails, the agent says so.
+A rule a machine can test should not stay a paragraph. The agent passes `--always-on` and `--check` on the same `ax log decision` command. Do not ask first. When a check fails, ax prints that decision’s Why. Hooks already run checks after edits. If one fails, the agent says so.
 
 ```yaml
 - id: unit-tests
@@ -142,7 +142,7 @@ You still do not edit `AGENTS.md` or `CLAUDE.md`. Those are copies. Saving a dec
 
 | File | What it is |
 | --- | --- |
-| `AGENTS.md` | Vision, always-on rules, one sentence per decision in force, plus the file path. Cursor reads this at the start of a chat. |
+| `AGENTS.md` | Vision, always-on rules, one sentence per decision in force, the three newest findings, plus file paths. Cursor reads this at the start of a chat. |
 | `.cursor/hooks.json` | After a file save, Cursor runs `ax check --tier fast`. |
 | `.cursor/skills/{id}/SKILL.md` | Notes marked `hints: [user-invocable]`. |
 | `.cursor/agents/` | Only if a note is marked `hints: [isolation]`. |

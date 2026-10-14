@@ -3,6 +3,7 @@ package checks
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -23,9 +24,28 @@ func runBuiltin(root, name string) error {
 		return checkConsistency(root)
 	case "ax-staleness":
 		return checkStaleness(root)
+	case "conventional-commits":
+		return checkConventionalCommits(root)
 	default:
 		return fmt.Errorf("unknown builtin %s", name)
 	}
+}
+
+var conventionalSubject = regexp.MustCompile(`^(feat|fix|docs|refactor|test|chore|perf|ci|style|build)(\([^)]+\))?!?: .+`)
+
+func checkConventionalCommits(root string) error {
+	if err := exec.Command("git", "-C", root, "rev-parse", "--is-inside-work-tree").Run(); err != nil {
+		return fmt.Errorf("git repository required")
+	}
+	out, err := exec.Command("git", "-C", root, "log", "-1", "--pretty=%s").Output()
+	if err != nil {
+		return nil
+	}
+	subject := strings.TrimSpace(string(out))
+	if !conventionalSubject.MatchString(subject) {
+		return fmt.Errorf("HEAD commit %q is not conventional", subject)
+	}
+	return nil
 }
 
 func checkFormat(root string) error {

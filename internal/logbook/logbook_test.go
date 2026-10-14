@@ -8,6 +8,25 @@ import (
 	"time"
 )
 
+func TestRecentObservationsKeepsNewest(t *testing.T) {
+	all := []*Observation{
+		{ID: "2026-10-09-first", Body: "old finding"},
+		{ID: "2026-10-10-second", Body: "middle finding"},
+		{ID: "2026-10-11-third", Body: "newer finding"},
+		{ID: "2026-10-12-fourth", Body: "newest finding"},
+	}
+	got := RecentObservations(all, 3)
+	if len(got) != 3 {
+		t.Fatalf("len = %d, want 3", len(got))
+	}
+	if got[0].ID != "2026-10-12-fourth" || got[1].ID != "2026-10-11-third" || got[2].ID != "2026-10-10-second" {
+		t.Fatalf("ids = %s, %s, %s", got[0].ID, got[1].ID, got[2].ID)
+	}
+	if RecentObservations(nil, 3) != nil {
+		t.Fatal("empty should stay empty")
+	}
+}
+
 func TestSlugify(t *testing.T) {
 	cases := []struct {
 		in, want string

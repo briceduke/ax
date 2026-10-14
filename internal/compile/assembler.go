@@ -82,6 +82,13 @@ func instructionsFile(spec *targets.Spec, snap *Snapshot) (File, error) {
 		}
 		b.WriteString("\n")
 	}
+	if len(snap.Observations) > 0 {
+		b.WriteString("## Recent findings\n\n")
+		for _, o := range snap.Observations {
+			fmt.Fprintf(&b, "- %s (`.ax/observations/%s.md`)\n", strings.TrimSpace(o.Body), o.ID)
+		}
+		b.WriteString("\n")
+	}
 	return File{Rel: spec.Instructions, Data: []byte(strings.TrimSpace(b.String()) + "\n"), Landing: landing}, nil
 }
 

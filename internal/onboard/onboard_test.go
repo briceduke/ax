@@ -34,12 +34,12 @@ func TestInitCheckPasses(t *testing.T) {
 	if err := checks.Run(root, checks.Options{Tier: checks.TierFull, All: true}, &buf); err != nil {
 		t.Fatalf("check after init: %v\n%s", err, buf.String())
 	}
-	for _, id := range []string{"own-the-harness", "log-friction", "sync-harness", "record-decision"} {
+	for _, id := range []string{"own-the-harness", "log-friction", "log-observation", "sync-harness", "record-decision"} {
 		if _, err := os.Stat(filepath.Join(root, ".ax", "capabilities", id+".md")); err != nil {
 			t.Fatalf("init missing capability %s: %v", id, err)
 		}
 	}
-	for _, id := range []string{"record-decision", "log-friction", "sync-harness"} {
+	for _, id := range []string{"record-decision", "log-friction", "log-observation", "sync-harness"} {
 		for _, dir := range []string{
 			filepath.Join(root, ".cursor", "skills", id, "SKILL.md"),
 			filepath.Join(root, ".claude", "skills", id, "SKILL.md"),
@@ -208,6 +208,40 @@ func TestDoctorPATH(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "container not verified") {
 		t.Fatalf("output = %q", buf.String())
+	}
+}
+
+func TestInitTTYWithNameAndIntentDoesNotInterview(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	var buf bytes.Buffer
+	err := Init(root, InitOptions{
+		Name:    "fin",
+		Intent:  "A packet analyzer.",
+		Targets: "cursor,claude-code",
+		IsTTY:   true,
+		Now:     now,
+	}, &buf)
+	if err != nil {
+		t.Fatalf("init: %v\n%s", err, buf.String())
+	}
+	for _, name := range []string{
+		"2026-10-04-choose-the-product-toolchain.md",
+		"2026-10-04-set-process-weight.md",
+	} {
+		if _, err := os.Stat(filepath.Join(root, ".ax", "decisions", name)); !os.IsNotExist(err) {
+			t.Fatalf("TTY init with --name and --intent wrote interview decision %s", name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "record")); !os.IsNotExist(err) {
+		t.Fatal("TTY init with --name and --intent should not create record/")
+	}
+	intent, err := os.ReadFile(filepath.Join(root, ".ax", "intent.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(intent), "unspecified") {
+		t.Fatalf("intent still has interview placeholders:\n%s", intent)
 	}
 }
 

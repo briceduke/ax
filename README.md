@@ -12,7 +12,7 @@ You open a folder and talk about what you are making. The agent asks until that 
 
 Saving the vision, a decision, a measurement, or a pain note rewrites `AGENTS.md` and `CLAUDE.md` before the command returns. There is no second compile step for you.
 
-Those two files stay short. They hold the vision, the few rules that must always be on, and one sentence per decision still in force. That sentence is the decision, followed by the file path. The rest of the writeup stays under `.ax/decisions/`. The agent opens that file only when it needs more than the sentence.
+Those two files stay short. They hold the vision, the few rules that must always be on, one sentence per decision still in force, and the three newest findings. That sentence is the decision, followed by the file path. The rest of the writeup stays under `.ax/decisions/`. The agent opens that file only when it needs more than the sentence.
 
 ## Install
 
@@ -80,7 +80,7 @@ release-please opens a version PR that bumps `VERSION` and `internal/version/ver
 
 | Path | Meaning |
 | --- | --- |
-| `AGENTS.md`, `CLAUDE.md` | Short copies for the next chat. Vision, always-on rules, one sentence per decision in force, plus the file path. |
+| `AGENTS.md`, `CLAUDE.md` | Short copies for the next chat. Vision, always-on rules, one sentence per decision in force, the three newest findings, plus file paths. |
 | `.ax/ax.yaml` | Which editors, which ax version, which packs, and whether notes are also in `record/`. |
 | `.ax/intent.md` | What this product is. |
 | `.ax/decisions/` | Choices. One file each. Never edited. |
@@ -102,7 +102,7 @@ For people working on ax itself. Ordinary product work happens in chat.
 ```
 ax log friction "one line"
 ax log observation "what you found" --method "how you found it"
-ax log decision "short title" [--supersedes older-id]
+ax log decision "short title" [--supersedes older-id] [--always-on] [--when when] [--check run-or-builtin]
 ax check [--tier fast|full|slow] [--all]
 ax compile [--target cursor] [--without scaffold-id]
 ax eval [--without scaffold-id] [--runs n]
@@ -115,13 +115,15 @@ ax pack extract <dir> --id <id> [--file path] [--replace old=PARAM]
 ax pack bootstrap <discipline>
 ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--notes record] [--interview]
 ax adopt
+ax notes
 ax notes show|hide
+ax help [command]
 ax install [--home <dir>]
 ax doctor [--require-container]
 ax version
 ```
 
-`ax log decision` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. No pipe writes those headings empty.
+`ax log decision` reads markdown on stdin: `## Context`, `## Options`, `## Choice`, `## Why`. No pipe writes those headings empty. `--always-on` writes a how-we-work note from the Choice sentence. `--check` adds a check that points at the new decision. `conventional-commits` is a built-in check.
 
 `ax init --name` and `--intent` are for tests and scripts. `/ax` is how a person starts. `ax install --home` is how tests write skills without touching a real user home directory.
 
