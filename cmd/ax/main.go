@@ -91,7 +91,7 @@ Usage:
   ax upgrade [--from <dir>] [--submit] [--skip-binary]
   ax pack add <dir>
   ax pack extract <dir> --id <id> [--file <path>] [--replace old=PARAM]
-	ax pack bootstrap <discipline>
+  ax pack bootstrap <discipline>
   ax init [--name <name>] [--intent <text>] [--targets cursor,claude-code] [--notes record] [--interview]
   ax adopt
   ax notes
@@ -101,6 +101,27 @@ Usage:
   ax doctor [--require-container]
   ax version
 `) + "\n"
+}
+
+// helpRequested reports whether args ask for usage.
+// The word "help" counts only as the command, so a log line that says help still logs.
+func helpRequested(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	if args[0] == "help" || isHelpFlag(args[0]) {
+		return true
+	}
+	for _, arg := range args[1:] {
+		if isHelpFlag(arg) {
+			return true
+		}
+	}
+	return false
+}
+
+func isHelpFlag(arg string) bool {
+	return arg == "--help" || arg == "-help" || arg == "-h"
 }
 
 const logCommands = `  ax log friction <one-line>
